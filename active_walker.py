@@ -2,7 +2,7 @@ from lib_walker.walker import *
 
 
 def main():
-    wr = walker()
+    wr = Walker()
     wr.run()
 
 

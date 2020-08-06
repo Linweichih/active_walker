@@ -3,15 +3,15 @@ from lib_walker.sensor import *
 from lib_walker.motor import *
 
 
-class walker:
+class Walker:
     def __init__(self):
         self.cam = usb_cam()
-        self.human_state = state()
-        self.walker_state = state()
+        self.human_state = State()
+        self.walker_state = State()
         self.left_cmd = 0
         self.right_cmd = 0
-        self.left_motor = motor()
-        self.right_motor = motor()
+        self.left_motor = Motor()
+        self.right_motor = Motor()
 
     def run(self):
         while True:
