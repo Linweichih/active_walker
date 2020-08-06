@@ -5,7 +5,7 @@ from lib_walker.motor import *
 
 class Walker:
     def __init__(self):
-        self.cam = usb_cam()
+        self.cam = UsbCam()
         self.human_state = State()
         self.walker_state = State()
         self.left_cmd = 0
