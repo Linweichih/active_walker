@@ -1,6 +1,8 @@
 import serial
 import configparser
 import os
+import time
+import sys
 config = configparser.ConfigParser()
 parent_dir = os.path.dirname(os.path.abspath(__file__))
 config.read(parent_dir + '/device.cfg')
@@ -49,3 +51,17 @@ class Motor:
             return int(ret_str)
         else:
             print("The serial is not open")
+
+    def close(self):
+        self.send_cmd("V0")
+        self.serial.close()
+
+
+if __name__ == '__main__':
+    motor = Motor('left_motor')
+    motor.send_cmd("V20")
+    time.sleep(1)
+    motor.send_cmd("V40")
+    time.sleep(1)
+    motor.close()
+    sys.exit()
