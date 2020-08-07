@@ -23,10 +23,10 @@ class Motor:
         print(motor_name, "'s serial initialize")
 
     def send_cmd(self, cmd):
-        motor_cmd = cmd + "\r\n"
+        motor_cmd = cmd + "\n\r\0"
         if self.serial.isOpen():
             try:
-                self.serial.write(motor_cmd)
+                self.serial.write(motor_cmd.encode())
             except serial.SerialException:
                 print("Can not send motor message")
             try:
@@ -38,17 +38,18 @@ class Motor:
             print("The serial is not open")
 
     def get_motor_pos(self):
-        motor_cmd = "POS\r\n"
+        motor_cmd = "POS\n\r\0"
         if self.serial.isOpen():
             try:
-                self.serial.write(motor_cmd)
+                self.serial.write(motor_cmd.encode())
             except serial.SerialException:
                 print("Can not send motor message")
             try:
                 ret_str = self.serial.readline()
+                return int(ret_str)
             except serial.SerialException:
                 print("Can not send motor message")
-            return int(ret_str)
+
         else:
             print("The serial is not open")
 
