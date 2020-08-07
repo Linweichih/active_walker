@@ -10,8 +10,8 @@ class Walker:
         self.walker_state = State()
         self.left_cmd = 0
         self.right_cmd = 0
-        self.left_motor = Motor()
-        self.right_motor = Motor()
+        self.left_motor = Motor('left_motor')
+        self.right_motor = Motor('right_motor')
 
     def run(self):
         while True:

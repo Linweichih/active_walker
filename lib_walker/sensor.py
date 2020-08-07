@@ -12,7 +12,7 @@ parent_dir = os.path.dirname(os.path.abspath(__file__))
 config.read(parent_dir + '/device.cfg')
 
 
-class usb_cam:
+class UsbCam:
     def __init__(self):
         """
         initialize the video camera  and read the first frame
@@ -29,7 +29,7 @@ class usb_cam:
 
 if __name__ == '__main__':
     cv2.namedWindow('image_win', flags=cv2.WINDOW_NORMAL | cv2.WINDOW_KEEPRATIO | cv2.WINDOW_GUI_EXPANDED)
-    cam = usb_cam()
+    cam = UsbCam()
     try:
         while True:
             ret, frame = cam.read()
