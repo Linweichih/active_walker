@@ -30,7 +30,9 @@ class Motor:
             except serial.SerialException:
                 print("Can not send motor message")
             try:
-                self.serial.readline()
+                ret_str = self.serial.readline()
+                if 'OK' not in ret_str:
+                    print('Command is not set to the driver')
             except serial.SerialException:
                 print("Can not send motor message")
 
@@ -62,7 +64,7 @@ if __name__ == '__main__':
     motor = Motor('left_motor')
     motor.send_cmd("V20")
     time.sleep(1)
-    motor.send_cmd("V40")
+    motor.send_cmd("V0")
     time.sleep(1)
     motor.close()
     sys.exit()

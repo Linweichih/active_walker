@@ -1,3 +1,5 @@
+import time
+
 
 class State:
     def __init__(self):
@@ -7,14 +9,18 @@ class State:
         self.v_x = 0.0
         self.v_y = 0.0
         self.omega = 0.0
+        self.time_stamp = time.time()
 
-    def update(self, x, y, theta, time_interval):
+    def update(self, x, y, theta):
+        time_interval = time.time() - self.time_stamp
+        self.time_stamp = time.time()
         self.v_x = (x-self.x)/time_interval
         self.v_y = (y - self.y) / time_interval
         self.omega = (theta - self.theta) / time_interval
         self.x = x
         self.y = y
         self.theta = theta
+
 
 
 
