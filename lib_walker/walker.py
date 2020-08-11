@@ -1,6 +1,7 @@
 from lib_walker.state import *
 from lib_walker.sensor import *
 from lib_walker.motor import *
+from lib_walker.timer import *
 import math
 
 
@@ -31,9 +32,11 @@ class Walker:
             # get the shoe detection result from image and the POS information from encoder
 
             self.get_walker_information()
-            human_x, human_y, human_theta = self.get_human_information(image_frame)
+            # self.get_human_information(image_frame)
+            # Controller Part Start here
 
-            self.human_state.update(human_x, human_y, human_theta)
+            #
+
             print("Process a image and send command spend ", time.time() - t_start, "secs")
             self.time_previous = time.time()
 
@@ -57,7 +60,7 @@ class Walker:
             self.walker_state.time_stamp = time.time()
 
         else:
-            # first time record
+            # first time record the encoder information
             self.walker_state.time_stamp = time.time()
 
     def get_human_information(self, image):
