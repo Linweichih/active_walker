@@ -66,10 +66,11 @@ class ObjectTrack:
 
     def find_center_angle(self, mask):
         center = [0, 0]
+        box = np.array([[0, 0], [0, 0], [0, 0], [0, 0]])
         center[0] = self.kalman.statePost[0]
         center[1] = self.kalman.statePost[1]
         angle = self.kalman.statePost[2]
-        _, cnts, _ = cv2.findContours(mask.copy(), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+        cnts, _ = cv2.findContours(mask.copy(), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
         # Ensure that the contours will only be one set
         if len(cnts) > 1:
             cnts = cnts[-1]

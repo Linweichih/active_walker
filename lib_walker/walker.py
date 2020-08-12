@@ -2,7 +2,7 @@ from lib_walker.state import *
 from lib_walker.sensor import *
 from lib_walker.motor import *
 from lib_walker.timer import *
-# from lib_walker.shoe_detection import *
+from lib_walker.shoe_detection import *
 import math
 
 
@@ -14,7 +14,7 @@ class Walker:
         self.K_2 = float(config.get('controller_config', 'K_2'))
         self.K_3 = float(config.get('controller_config', 'K_3'))
         self.K_4 = float(config.get('controller_config', 'K_4'))
-        self.DIST_MAX = float(config.get('controller_config', 'DIST_MAX'))
+        self.DIST_MAX = float(config.get('human_safety_parameter', 'DIST_MAX'))
 
         self.cam = UsbCam()
         self.human_state = State()
@@ -24,8 +24,8 @@ class Walker:
         self.walker_x = 0
         self.walker_y = 0
         self.walker_theta = 0
-        self.left_motor = Motor('left_motor')
-        self.right_motor = Motor('right_motor')
+        # self.left_motor = Motor('left_motor')
+        # self.right_motor = Motor('right_motor')
         self.motor_semaphore = Semaphore(1)
         self.data_semaphore = Semaphore(1)
         self.time_previous = -1
@@ -41,19 +41,19 @@ class Walker:
         self.cam_timer.daemon = True
         self.command_timer = timer(0.09, self.controller)
         self.command_timer.daemon = True
-        # self.shoe_detection = ShoeDetection()
+        self.shoe_detection = ShoeDetection()
         print("walker init success!!")
 
     def run(self):
         self.cam_timer.start()
-        self.encoder_timer.start()
+        # self.encoder_timer.start()
         while True:
             t_start = time.time()
             # get the shoe detection result from image and the POS information from encoder
 
             # self.get_walker_information()
             # Controller Part Start here
-            time.sleep(20)
+            time.sleep(10)
             self.cam_timer.cancel()
             self.encoder_timer.cancel()
             print("Process a image and send command spend ", time.time() - t_start, "secs")
@@ -70,10 +70,8 @@ class Walker:
             if keyboard_ret == 27:
                 self.cam_timer.cancel()
         # process the shoe detection
-        """
         pro_image = self.shoe_detection.detect(image_frame)
         cv2.imshow('Processed_image', pro_image)
-        """
 
     def controller(self):
         timer_interval = 0.09

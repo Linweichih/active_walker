@@ -89,8 +89,12 @@ class ShoeDetection:
                                        (np.uint8(self.human_position[0] + 20 * math.sin(self.human_angle))
                                         , np.uint8(self.human_position[1] + 20 * math.cos(self.human_angle))),
                                        (0, 0, 200), 8)
-            processed_image = cv2.drawContours(processed_image, right_bbox, -1, (120, 120, 0), 3)
-            processed_image = cv2.drawContours(processed_image, left_bbox, -1, (120, 120, 0), 3)
+            print("right box:", right_bbox)
+            if right_bbox.all() != 0:
+                processed_image = cv2.drawContours(processed_image, [right_bbox], -1, (120, 120, 0), 3)
+            print("left box:", left_bbox)
+            if left_bbox.all() != 0:
+                processed_image = cv2.drawContours(processed_image, [left_bbox], -1, (0, 120, 120), 3)
 
             print("Use {} sec to process the image".format(time.time() - t_s))
             return processed_image
