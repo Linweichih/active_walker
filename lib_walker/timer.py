@@ -1,4 +1,5 @@
 from threading import Timer, Thread, Event
+from lib_walker.sensor import *
 import time
 
 
@@ -13,15 +14,28 @@ class timer(Timer):
 
 
 if __name__ == '__main__':
-    def cb(time_interval):
-        print("hello ", time_interval, "timer'time: ", time.time())
+    # cam = UsbCam()
+    # print(cam, "initialize success!!")
 
-    t = timer(0.02, cb, (0.2,))
-    t2 = timer(0.01, cb, (0.1,))
+    def cam_cb(timer_name):
+        print("hello ", timer_name, "timer's start time: ", time.time())
+        time.sleep(0.06)
+        print("hello ", timer_name, "timer's end time: ", time.time())
+
+    def con_cb(timer_name):
+        print("hello ", timer_name, "timer's start time: ", time.time())
+        time.sleep(0.01)
+        print("control command!!!")
+        print("hello ", timer_name, "timer's end time: ", time.time())
+
+    t1 = timer(0.03, cam_cb, ('usb_cam',))
+    t2 = timer(0.1, con_cb, ('controller',))
+    t1.daemon = True
+    t2.daemon = True
     t2.start()
-    t.start()
-    time.sleep(0.1)
-    t.cancel()
+    t1.start()
+    time.sleep(10)
+    t1.cancel()
     t2.cancel()
 
 
