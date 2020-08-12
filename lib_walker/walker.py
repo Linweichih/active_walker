@@ -8,6 +8,14 @@ import math
 
 class Walker:
     def __init__(self):
+        self.MAX_W = float(config.get('motor_config', 'max_omega'))
+        self.MAX_V = float(config.get('motor_config', 'max_velocity'))
+        self.K_1 = float(config.get('controller_config', 'K_1'))
+        self.K_2 = float(config.get('controller_config', 'K_2'))
+        self.K_3 = float(config.get('controller_config', 'K_3'))
+        self.K_4 = float(config.get('controller_config', 'K_4'))
+        self.DIST_MAX = float(config.get('controller_config', 'DIST_MAX'))
+
         self.cam = UsbCam()
         self.human_state = State()
         self.walker_state = State()
@@ -16,8 +24,8 @@ class Walker:
         self.walker_x = 0
         self.walker_y = 0
         self.walker_theta = 0
-        # self.left_motor = Motor('left_motor')
-        # self.right_motor = Motor('right_motor')
+        self.left_motor = Motor('left_motor')
+        self.right_motor = Motor('right_motor')
         self.motor_semaphore = Semaphore(1)
         self.data_semaphore = Semaphore(1)
         self.time_previous = -1
@@ -38,6 +46,7 @@ class Walker:
 
     def run(self):
         self.cam_timer.start()
+        self.encoder_timer.start()
         while True:
             t_start = time.time()
             # get the shoe detection result from image and the POS information from encoder
@@ -46,7 +55,7 @@ class Walker:
             # Controller Part Start here
             time.sleep(20)
             self.cam_timer.cancel()
-
+            self.encoder_timer.cancel()
             print("Process a image and send command spend ", time.time() - t_start, "secs")
             self.time_previous = time.time()
             break
@@ -67,7 +76,29 @@ class Walker:
         """
 
     def controller(self):
-        pass
+        timer_interval = 0.09
+        if self.data_semaphore.acquire():
+            robot_vel = self.walker_state.v
+            robot_angle_vel = self.walker_state.omega
+            self.data_semaphore.release()
+
+        accel = -self.K_1 * (robot_vel - desired_vel) - self.K_2 * (human_dist - desired_dist)
+        angle_accel = -self.K_3 * (robot_angle_vel - desired_angle_vel) - self.K_4 * (human_angle - desired_angle)
+        v = robot_vel + accel * timer_interval
+        omega = robot_angle_vel + angle_accel * timer_interval
+        if v > self.MAX_V:
+            v = self.MAX_V
+        if omega > self.MAX_W:
+            omega = self.MAX_W
+        desire_rpml = (2 * v - omega * self.wheel_dist) / (2 * self.wheel_dist) / math.pi / 2 * 60 * self.gear_ratio
+        desire_rpmr = (2 * v + omega * self.wheel_dist) / (2 * self.wheel_dist) / math.pi / 2 * 60 * self.gear_ratio
+        right_cmd = "V" + str(-1*int(desire_rpmr))
+        left_cmd = "V" + str(int(desire_rpml))
+
+        if self.motor_semaphore.acquire():
+            self.left_motor.send_cmd(left_cmd)
+            self.right_motor.send_cmd(right_cmd)
+            self.motor_semaphore.release()
 
     def get_walker_information(self):
         if self.walker_state.time_stamp != -1:
