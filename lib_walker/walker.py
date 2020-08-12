@@ -32,7 +32,7 @@ class Walker:
             # get the shoe detection result from image and the POS information from encoder
 
             self.get_walker_information()
-            # self.get_human_information(image_frame)
+            self.get_human_information(image_frame)
             # Controller Part Start here
 
             #

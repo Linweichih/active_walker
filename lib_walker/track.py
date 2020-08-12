@@ -51,7 +51,7 @@ class ObjectTrack:
         mask = cv2.morphologyEx(mask, cv2.MORPH_OPEN, self.open_kernel)
         mask = cv2.morphologyEx(mask, cv2.MORPH_CLOSE, self.close_kernel)
         # get the obb of the mask
-        self.position, self.angle = self.find_center_angle(mask)
+        self.position, self.angle, bbox = self.find_center_angle(mask)
         # implement kalman filter
         current_measurement = np.array(
             [[np.float32(self.position[0])], [np.float32(self.position[1])], [np.float32(self.angle)]])
@@ -62,7 +62,7 @@ class ObjectTrack:
         self.position[0] = pose[0]
         self.position[1] = pose[1]
         self.angle = pose[2]
-        return self.position, self.angle
+        return self.position, self.angle, bbox
 
     def find_center_angle(self, mask):
         center = [0, 0]
@@ -85,6 +85,6 @@ class ObjectTrack:
             side = box_head(box)
             angle = math.atan2((side[0] - center[0]), (side[1] - center[1]))
 
-        return center, angle
+        return center, angle, box
 
 
