@@ -14,7 +14,7 @@ def box_head(box):
     x = [box[0][0], box[1][0], box[2][0], box[3][0]]
     y = [box[0][1], box[1][1], box[2][1], box[3][1]]
     ind = np.lexsort((x, y))
-    tmp = np.zeros((4, 2), np.uint8)
+    tmp = np.zeros((4, 2))
     # print(x)
     # print(y)
     # print(tmp)
@@ -47,7 +47,7 @@ class ObjectTrack:
 
     def update(self, mask):
         # pre-process the mask
-        mask = cv2.bitwise_and(mask, self.filter_kernel)
+        # mask = cv2.bitwise_and(mask, self.filter_kernel)
         mask = cv2.morphologyEx(mask, cv2.MORPH_OPEN, self.open_kernel)
         mask = cv2.morphologyEx(mask, cv2.MORPH_CLOSE, self.close_kernel)
         # get the obb of the mask

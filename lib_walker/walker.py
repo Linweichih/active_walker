@@ -53,12 +53,13 @@ class Walker:
 
             # self.get_walker_information()
             # Controller Part Start here
-            time.sleep(10)
-            self.cam_timer.cancel()
-            self.encoder_timer.cancel()
-            print("Process a image and send command spend ", time.time() - t_start, "secs")
-            self.time_previous = time.time()
-            break
+            key = cv2.waitKey(1)
+            if key == 27:
+                self.cam_timer.cancel()
+                self.encoder_timer.cancel()
+                print("Process a image and send command spend ", time.time() - t_start, "secs")
+                self.time_previous = time.time()
+                break
 
     def image_process(self):
         cv2.namedWindow('Read_image', flags=cv2.WINDOW_NORMAL | cv2.WINDOW_KEEPRATIO | cv2.WINDOW_GUI_EXPANDED)

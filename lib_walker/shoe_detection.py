@@ -50,7 +50,8 @@ class ShoeDetection:
     def detect(self, image):
         no_foot_flag = False
         # get the image of camera
-        resized_image = cv2.resize(image, (256, 192))
+        resized_image = cv2.resize(image, (int(config.get('usb_cam', 'image_width')),
+                                           int(config.get('usb_cam', 'image_height'))))
         # NHWC -> NCHW
         input_img = self.data_transform(image)
         input_img = torch.unsqueeze(input_img, 0)
@@ -85,9 +86,9 @@ class ShoeDetection:
             # put the human pos and angle onto image
 
             processed_image = cv2.line(resized_image,
-                                       (np.uint8(self.human_position[0]), np.uint8(self.human_position[1])),
-                                       (np.uint8(self.human_position[0] + 20 * math.sin(self.human_angle))
-                                        , np.uint8(self.human_position[1] + 20 * math.cos(self.human_angle))),
+                                       (int(self.human_position[0]), int(self.human_position[1])),
+                                       (int(self.human_position[0] + 60 * math.sin(self.human_angle))
+                                        , int(self.human_position[1] + 60 * math.cos(self.human_angle))),
                                        (0, 0, 200), 8)
             print("right box:", right_bbox)
             if right_bbox.all() != 0:

@@ -18,8 +18,8 @@ class UsbCam:
         initialize the video camera  and read the first frame
         """
         self.cap = cv2.VideoCapture(int(config.get('usb_cam', 'cam_src')))
-        self.cap.set(cv2.CAP_PROP_FRAME_WIDTH, int(config.get('usb_cam', 'image_width')))
-        self.cap.set(cv2.CAP_PROP_FRAME_HEIGHT, int(config.get('usb_cam', 'image_height')))
+        self.cap.set(4, int(config.get('usb_cam', 'image_width')))
+        self.cap.set(3, int(config.get('usb_cam', 'image_height')))
         print("initialize success ")
 
     def read(self):
