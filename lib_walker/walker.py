@@ -3,6 +3,7 @@ from lib_walker.sensor import *
 from lib_walker.motor import *
 from lib_walker.timer import *
 from lib_walker.shoe_detection import *
+from threading import Semaphore
 import math
 
 
