@@ -1,5 +1,3 @@
-import time
-
 
 class State:
     def __init__(self):

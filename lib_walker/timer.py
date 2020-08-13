@@ -1,5 +1,4 @@
-from threading import Timer, Thread, Event, Semaphore
-from lib_walker.sensor import *
+from threading import Timer
 import time
 
 
