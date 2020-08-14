@@ -7,6 +7,13 @@ from threading import Semaphore
 import math
 
 
+def img2real_transform(human_pos_walker_frame, human_ang_walker_frame):
+    """
+        real transform will depend on the camera placed
+    """
+    return human_pos_walker_frame, human_ang_walker_frame
+
+
 class Walker:
     def __init__(self):
         self.MAX_W = float(config.get('motor_config', 'max_omega'))
@@ -28,7 +35,8 @@ class Walker:
         # self.left_motor = Motor('left_motor')
         # self.right_motor = Motor('right_motor')
         self.motor_semaphore = Semaphore(1)
-        self.data_semaphore = Semaphore(1)
+        self.walker_data_semaphore = Semaphore(1)
+        self.human_data_semaphore = Semaphore(1)
         self.time_previous = -1
         self.img_num = 0
         self.pulse_l = 0
@@ -65,6 +73,7 @@ class Walker:
     def image_process(self):
         cv2.namedWindow('Read_image', flags=cv2.WINDOW_NORMAL | cv2.WINDOW_KEEPRATIO | cv2.WINDOW_GUI_EXPANDED)
         cv2.namedWindow('Processed_image', flags=cv2.WINDOW_NORMAL | cv2.WINDOW_KEEPRATIO | cv2.WINDOW_GUI_EXPANDED)
+        cv2.namedWindow('detection_mask', flags=cv2.WINDOW_NORMAL | cv2.WINDOW_KEEPRATIO | cv2.WINDOW_GUI_EXPANDED)
         ret_flag, image_frame = self.cam.read()
         if ret_flag:
             cv2.imshow('Read_image', image_frame)
@@ -72,16 +81,38 @@ class Walker:
             if keyboard_ret == 27:
                 self.cam_timer.cancel()
         # process the shoe detection
-        pro_image = self.shoe_detection.detect(image_frame)
+        pro_image, mask, human_pos_walker_frame, human_ang_walker_frame = self.shoe_detection.detect(image_frame)
         cv2.imshow('Processed_image', pro_image)
+        cv2.imshow('detection_mask', mask)
+        human_pos, human_ang = img2real_transform(human_pos_walker_frame, human_ang_walker_frame)
+        if self.human_data_semaphore.acquire():
+            time_stamp = self.human_state.time_stamp
+            self.human_data_semaphore.release()
+        if time_stamp == -1:
+            # first time record the human pose information
+            if self.human_data_semaphore.acquire():
+                self.human_state.time_stamp = time.time()
+                self.human_data_semaphore.release()
+        else:
+            time_interval = time.time() - time_stamp
+            if self.human_data_semaphore.acquire():
+                self.human_state.v = human_pos[1] - self.human_state.y
+                self.human_state.omega = human_ang - self.human_state.theta
+                self.human_state.y = human_pos[1]
+                self.human_state.x = human_pos[0]
+                self.human_state.theta = human_ang
+                self.human_state.time_stamp = time.time()
+                self.human_data_semaphore.release()
 
     def controller(self):
         timer_interval = 0.09
-        if self.data_semaphore.acquire():
+        if self.walker_data_semaphore.acquire():
             robot_vel = self.walker_state.v
             robot_angle_vel = self.walker_state.omega
-            self.data_semaphore.release()
+            self.walker_data_semaphore.release()
+        if self.human_data_semaphore.acquire():
 
+            self.human_data_semaphore.release()
         accel = -self.K_1 * (robot_vel - desired_vel) - self.K_2 * (human_dist - desired_dist)
         angle_accel = -self.K_3 * (robot_angle_vel - desired_angle_vel) - self.K_4 * (human_angle - desired_angle)
         v = robot_vel + accel * timer_interval
@@ -101,38 +132,34 @@ class Walker:
             self.motor_semaphore.release()
 
     def get_walker_information(self):
-        if self.walker_state.time_stamp != -1:
+        if self.walker_data_semaphore.acquire():
+            time_stamp = self.walker_state.time_stamp
+            self.walker_data_semaphore.release()
+        if time_stamp != -1:
             # not first time record
             if self.motor_semaphore.acquire():
                 pulse_l = self.left_motor.get_motor_pos()
                 pulse_r = self.right_motor.get_motor_pos()
                 self.motor_semaphore.release()
-            if self.data_semaphore.release():
-                timer_interval = time.time() - self.walker_state.time_stamp
-                self.data_semaphore.release()
+
+            timer_interval = time.time() - time_stamp
 
             vl = (pulse_l - self.pulse_l) / 3000 / self.gear_ratio * 2 * math.pi / timer_interval
             vr = -(pulse_r - self.pulse_r) / 3000 / self.gear_ratio * 2 * math.pi / timer_interval  # notice the "minus"
 
-            if self.data_semaphore.release():
+            if self.walker_data_semaphore.release():
                 self.walker_state.v = self.wheel_radius / 2 * (vr + vl)
                 self.walker_state.omega = self.wheel_radius / self.wheel_dist * (vr - vl)
                 self.walker_state.x += self.walker_state.v * math.cos(self.walker_state.theta) * timer_interval
                 self.walker_state.y += self.walker_state.v * math.sin(self.walker_state.theta) * timer_interval
                 self.walker_state.theta += self.walker_state.omega * timer_interval
                 self.walker_state.time_stamp = time.time()
-                self.data_semaphore.release()
+                self.walker_data_semaphore.release()
 
         else:
             # first time record the encoder information
-            if self.data_semaphore.acquire():
+            if self.walker_data_semaphore.acquire():
                 self.walker_state.time_stamp = time.time()
-                self.data_semaphore.release()
-"""
-    def get_human_information(self, image):
-            human_x_walker_based = 0
-            human_y_walker_based = 0
-            human_theta_walker_based = 0
-            return human_x, human_y, human_theta
-"""
+                self.walker_data_semaphore.release()
+
 
