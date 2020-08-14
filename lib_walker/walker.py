@@ -48,11 +48,11 @@ class Walker:
     def run(self):
         self.cam_timer.start()
         # self.encoder_timer.start()
+        # self.command_timer.start()
         while True:
             t_start = time.time()
             # get the shoe detection result from image and the POS information from encoder
 
-            # self.get_walker_information()
             # Controller Part Start here
             key = cv2.waitKey(1)
             if key == 27:

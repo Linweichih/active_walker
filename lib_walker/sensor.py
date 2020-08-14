@@ -2,6 +2,7 @@ import cv2
 import sys
 import os
 import configparser
+import serial
 config = configparser.ConfigParser()
 parent_dir = os.path.dirname(os.path.abspath(__file__))
 config.read(parent_dir + '/device.cfg')
@@ -20,6 +21,17 @@ class UsbCam:
     def read(self):
         ret, frame = self.cap.read()
         return ret, frame
+
+
+class ForceSensor:
+    def __init__(self):
+        self.com_port = int(config.get("force_sensor", 'PortName'))
+        self.baud_rate = int(config.get("force_sensor", 'BaudRate'))
+        self.time_out = int(config.get("force_sensor", 'Read_timeout'))
+        self.force_sensor = serial.Serial(self.com_port, self.baud_rate, timeout=self.time_out)
+
+    def read_force_data(self):
+        pass
 
 
 if __name__ == '__main__':
