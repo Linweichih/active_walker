@@ -55,9 +55,9 @@ class ShoeDetection:
         # NHWC -> NCHW
         input_img = self.data_transform(image)
         input_img = torch.unsqueeze(input_img, 0)
-        print("Size of image tensor:{}".format(input_img.size()))
+        # print("Size of image tensor:{}".format(input_img.size()))
         # put the tensor in to model
-        print("start process a image ")
+        # print("start process a image ")
         if torch.cuda.is_available():
             input_img = input_img.cuda()
         t_s = time.time()
@@ -73,7 +73,7 @@ class ShoeDetection:
         left_mask = outputs[:, :, 1]
         right_pos, right_angle, right_bbox = self.right_shoe_track.update(right_mask)
         left_pos, left_angle, left_bbox = self.left_shoe_track.update(left_mask)
-        if left_angle > 90 and right_angle > 90:
+        if left_angle > 1.7 and right_angle > 1.7:
             no_foot_flag = True
         if not no_foot_flag:
             self.human_position[0] = right_pos[0] / 2 + left_pos[0] / 2
@@ -87,17 +87,17 @@ class ShoeDetection:
 
             processed_image = cv2.line(resized_image,
                                        (int(self.human_position[0]), int(self.human_position[1])),
-                                       (int(self.human_position[0] + 60 * math.sin(self.human_angle))
-                                        , int(self.human_position[1] + 60 * math.cos(self.human_angle))),
+                                       (int(self.human_position[0] + 60 * math.sin(self.human_angle)),
+                                        int(self.human_position[1] + 60 * math.cos(self.human_angle))),
                                        (0, 0, 200), 8)
-            print("right box:", right_bbox)
+            # print("right box:", right_bbox)
             if right_bbox.all() != 0:
                 processed_image = cv2.drawContours(processed_image, [right_bbox], -1, (120, 120, 0), 3)
-            print("left box:", left_bbox)
+            # print("left box:", left_bbox)
             if left_bbox.all() != 0:
                 processed_image = cv2.drawContours(processed_image, [left_bbox], -1, (0, 120, 120), 3)
 
-            print("Use {} sec to process the image".format(time.time() - t_s))
+            print("Use {} sec to process a image".format(time.time() - t_s))
             return processed_image, outputs, self.human_position, self.human_angle
         else:
             return resized_image

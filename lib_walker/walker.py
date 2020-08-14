@@ -14,6 +14,28 @@ def img2real_transform(human_pos_walker_frame, human_ang_walker_frame):
     return human_pos_walker_frame, human_ang_walker_frame
 
 
+DIST_MAX = float(config.get('human_safety_parameter', 'DIST_MAX'))
+DIST_MIN = float(config.get('human_safety_parameter', 'DIST_MIN'))
+ANGLE_MAX = float(config.get('human_safety_parameter', 'ANGLE_MAX'))
+ANGLE_MIN = float(config.get('human_safety_parameter', 'ANGLE_MIN'))
+
+
+def get_desired_pose(human_dist, human_angle):
+    if human_dist > DIST_MAX:
+        desired_dist = DIST_MAX
+    elif human_dist < DIST_MIN:
+        desired_dist = DIST_MIN
+    else:
+        desired_dist = human_dist
+    if human_angle > ANGLE_MAX:
+        desired_angle = ANGLE_MAX
+    elif human_angle < ANGLE_MIN:
+        desired_angle = ANGLE_MIN
+    else:
+        desired_angle = human_dist
+    return desired_dist, desired_angle
+
+
 class Walker:
     def __init__(self):
         self.MAX_W = float(config.get('motor_config', 'max_omega'))
@@ -22,7 +44,6 @@ class Walker:
         self.K_2 = float(config.get('controller_config', 'K_2'))
         self.K_3 = float(config.get('controller_config', 'K_3'))
         self.K_4 = float(config.get('controller_config', 'K_4'))
-        self.DIST_MAX = float(config.get('human_safety_parameter', 'DIST_MAX'))
 
         self.cam = UsbCam()
         self.human_state = State()
@@ -110,9 +131,15 @@ class Walker:
             robot_vel = self.walker_state.v
             robot_angle_vel = self.walker_state.omega
             self.walker_data_semaphore.release()
-        if self.human_data_semaphore.acquire():
+        # Position control
+        desired_vel = robot_vel
+        desired_angle_vel =robot_angle_vel
 
+        if self.human_data_semaphore.acquire():
+            human_dist = self.human_state.y
+            human_angle = self.human_state.theta
             self.human_data_semaphore.release()
+        desired_dist, desired_angle = get_desired_pose(human_dist, human_angle)
         accel = -self.K_1 * (robot_vel - desired_vel) - self.K_2 * (human_dist - desired_dist)
         angle_accel = -self.K_3 * (robot_angle_vel - desired_angle_vel) - self.K_4 * (human_angle - desired_angle)
         v = robot_vel + accel * timer_interval
