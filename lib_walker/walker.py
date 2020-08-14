@@ -53,8 +53,8 @@ class Walker:
         self.walker_x = 0
         self.walker_y = 0
         self.walker_theta = 0
-        # self.left_motor = Motor('left_motor')
-        # self.right_motor = Motor('right_motor')
+        self.left_motor = Motor('left_motor')
+        self.right_motor = Motor('right_motor')
         self.motor_semaphore = Semaphore(1)
         self.walker_data_semaphore = Semaphore(1)
         self.human_data_semaphore = Semaphore(1)
@@ -76,20 +76,12 @@ class Walker:
 
     def run(self):
         self.cam_timer.start()
-        # self.encoder_timer.start()
-        # self.command_timer.start()
+        self.encoder_timer.start()
+        self.command_timer.start()
         while True:
-            t_start = time.time()
+            pass
             # get the shoe detection result from image and the POS information from encoder
-
             # Controller Part Start here
-            key = cv2.waitKey(1)
-            if key == 27:
-                self.cam_timer.cancel()
-                self.encoder_timer.cancel()
-                print("Process a image and send command spend ", time.time() - t_start, "secs")
-                self.time_previous = time.time()
-                break
 
     def image_process(self):
         cv2.namedWindow('Read_image', flags=cv2.WINDOW_NORMAL | cv2.WINDOW_KEEPRATIO | cv2.WINDOW_GUI_EXPANDED)
@@ -100,6 +92,8 @@ class Walker:
             cv2.imshow('Read_image', image_frame)
             keyboard_ret = cv2.waitKey(1)
             if keyboard_ret == 27:
+                self.command_timer.cancel()
+                self.encoder_timer.cancel()
                 self.cam_timer.cancel()
         # process the shoe detection
         pro_image, mask, human_pos_walker_frame, human_ang_walker_frame = self.shoe_detection.detect(image_frame)
@@ -133,7 +127,7 @@ class Walker:
             self.walker_data_semaphore.release()
         # Position control
         desired_vel = robot_vel
-        desired_angle_vel =robot_angle_vel
+        desired_angle_vel = robot_angle_vel
 
         if self.human_data_semaphore.acquire():
             human_dist = self.human_state.y
@@ -142,29 +136,33 @@ class Walker:
         desired_dist, desired_angle = get_desired_pose(human_dist, human_angle)
         accel = -self.K_1 * (robot_vel - desired_vel) - self.K_2 * (human_dist - desired_dist)
         angle_accel = -self.K_3 * (robot_angle_vel - desired_angle_vel) - self.K_4 * (human_angle - desired_angle)
+        print("accel:", accel, "angle_accel", angle_accel)
         v = robot_vel + accel * timer_interval
         omega = robot_angle_vel + angle_accel * timer_interval
         if v > self.MAX_V:
             v = self.MAX_V
         if omega > self.MAX_W:
             omega = self.MAX_W
-        desire_rpml = (2 * v - omega * self.wheel_dist) / (2 * self.wheel_dist) / math.pi / 2 * 60 * self.gear_ratio
-        desire_rpmr = (2 * v + omega * self.wheel_dist) / (2 * self.wheel_dist) / math.pi / 2 * 60 * self.gear_ratio
-        right_cmd = "V" + str(-1*int(desire_rpmr))
-        left_cmd = "V" + str(int(desire_rpml))
+        desire_rpm_l = (2 * v - omega * self.wheel_dist) / (2 * self.wheel_dist) / math.pi / 2 * 60 * self.gear_ratio
+        desire_rpm_r = (2 * v + omega * self.wheel_dist) / (2 * self.wheel_dist) / math.pi / 2 * 60 * self.gear_ratio
+        right_cmd = "V" + str(-1*int(desire_rpm_r))
+        left_cmd = "V" + str(int(desire_rpm_l))
 
         if self.motor_semaphore.acquire():
+            print("l_cmd:", left_cmd, "r_cmd:", right_cmd)
             self.left_motor.send_cmd(left_cmd)
             self.right_motor.send_cmd(right_cmd)
             self.motor_semaphore.release()
 
     def get_walker_information(self):
+
         if self.walker_data_semaphore.acquire():
             time_stamp = self.walker_state.time_stamp
             self.walker_data_semaphore.release()
         if time_stamp != -1:
             # not first time record
             if self.motor_semaphore.acquire():
+                print("get encoder information!!")
                 pulse_l = self.left_motor.get_motor_pos()
                 pulse_r = self.right_motor.get_motor_pos()
                 self.motor_semaphore.release()

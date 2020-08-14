@@ -37,7 +37,7 @@ class ObjectTrack:
              [0, 0, 0, 0, 0, 1]], np.float32)
         self.kalman.processNoiseCov = np.array(
             [[1, 0, 0, 0, 0, 0], [0, 1, 0, 0, 0, 0], [0, 0, 1, 0, 0, 0], [0, 0, 0, 1, 0, 0], [0, 0, 0, 0, 1, 0],
-             [0, 0, 0, 0, 0, 1]], np.float32) * 0.0002
+             [0, 0, 0, 0, 0, 1]], np.float32) * 0.0005
         # filter the image of feet in the rec that the feet will appear
         self.filter_kernel = np.zeros(INPUT_IMG_SIZE, np.uint8)
         self.filter_kernel[0:170, 60:200] = 255

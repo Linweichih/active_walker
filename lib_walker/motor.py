@@ -10,10 +10,14 @@ config.read(parent_dir + '/device.cfg')
 
 class Motor:
     def __init__(self, motor_name):
-        self.com_port = int(config.get(motor_name, 'PortName'))
+        self.com_port = config.get(motor_name, 'PortName')
         self.baud_rate = int(config.get(motor_name, 'BaudRate'))
         self.time_out = int(config.get(motor_name, 'Read_timeout'))
-        self.serial = serial.Serial(self.com_port, self.baud_rate, timeout=self.time_out)
+        try:
+            self.serial = serial.Serial(self.com_port, self.baud_rate, timeout=self.time_out)
+        except serial.SerialException:
+            print("Connect to {} serial error!!", self.com_port)
+            sys.exit()
         # set acceleration maximum
         self.send_cmd("AC10")
         self.send_cmd("DEC100")
@@ -31,7 +35,7 @@ class Motor:
                 print("Can not send motor message")
             try:
                 ret_str = self.serial.readline()
-                if 'OK' not in ret_str:
+                if 'OK'.encode() not in ret_str:
                     print('Command is not set to the driver')
             except serial.SerialException:
                 print("Can not send motor message")
@@ -61,9 +65,9 @@ class Motor:
 
 
 if __name__ == '__main__':
-    motor = Motor('left_motor')
-    motor.send_cmd("V20")
-    time.sleep(1)
+    motor = Motor('right_motor')
+    motor.send_cmd("V50")
+    time.sleep(3)
     motor.send_cmd("V0")
     time.sleep(1)
     motor.close()
