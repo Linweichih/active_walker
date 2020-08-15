@@ -46,6 +46,7 @@ class ObjectTrack:
         self.close_kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (20, 20))
 
     def update(self, mask):
+
         # pre-process the mask
         # mask = cv2.bitwise_and(mask, self.filter_kernel)
         mask = cv2.morphologyEx(mask, cv2.MORPH_OPEN, self.open_kernel)
@@ -55,9 +56,11 @@ class ObjectTrack:
         # implement kalman filter
         current_measurement = np.array(
             [[np.float32(self.position[0])], [np.float32(self.position[1])], [np.float32(self.angle)]])
-        if self.position[0] > 0:
+        if self.kalman.statePost[0] == 0:
+            pass
+        else:
             self.kalman.correct(current_measurement)
-            self.angle = 100
+
         pose = self.kalman.predict()
         self.position[0] = pose[0]
         self.position[1] = pose[1]
