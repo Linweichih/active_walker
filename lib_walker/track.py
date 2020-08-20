@@ -42,7 +42,7 @@ class ObjectTrack:
         self.filter_kernel = np.zeros(INPUT_IMG_SIZE, np.uint8)
         self.filter_kernel[0:170, 60:200] = 255
         # set the open/close operation kernel
-        self.open_kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (10, 10))
+        self.open_kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (30, 30))
         self.close_kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (20, 20))
 
     def update(self, mask):
