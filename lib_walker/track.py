@@ -37,7 +37,8 @@ class ObjectTrack:
              [0, 0, 0, 0, 0, 1]], np.float32)
         self.kalman.processNoiseCov = np.array(
             [[1, 0, 0, 0, 0, 0], [0, 1, 0, 0, 0, 0], [0, 0, 1, 0, 0, 0], [0, 0, 0, 1, 0, 0], [0, 0, 0, 0, 1, 0],
-             [0, 0, 0, 0, 0, 1]], np.float32) * 0.0005
+             [0, 0, 0, 0, 0, 1]], np.float32) * 0.001
+        self.kalman.measurementNoiseCov = np.array([[1, 0, 0], [0, 1, 0], [0, 0, 1]], np.float32) * 0.001
         # filter the image of feet in the rec that the feet will appear
         self.filter_kernel = np.zeros(INPUT_IMG_SIZE, np.uint8)
         self.filter_kernel[0:170, 60:200] = 255
@@ -56,11 +57,9 @@ class ObjectTrack:
         # implement kalman filter
         current_measurement = np.array(
             [[np.float32(self.position[0])], [np.float32(self.position[1])], [np.float32(self.angle)]])
-        if self.kalman.statePost[0] == 0:
-            pass
-        else:
+        print(current_measurement)
+        if self.position[0] > 0:
             self.kalman.correct(current_measurement)
-
         pose = self.kalman.predict()
         self.position[0] = pose[0]
         self.position[1] = pose[1]

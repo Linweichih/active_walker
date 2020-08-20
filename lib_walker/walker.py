@@ -78,11 +78,10 @@ class Walker:
         self.cam_timer.start()
         time.sleep(5)
         # wait 5 secs to let the camera track the feet
-
         # self.encoder_timer.start()
         # self.command_timer.start()
         while True:
-            pass
+            time.sleep(1)
             # get the shoe detection result from image and the POS information from encoder
             # Controller Part Start here
 
