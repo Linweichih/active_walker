@@ -53,8 +53,8 @@ class Walker:
         self.walker_x = 0
         self.walker_y = 0
         self.walker_theta = 0
-        self.left_motor = Motor('left_motor')
-        self.right_motor = Motor('right_motor')
+        # self.left_motor = Motor('left_motor')
+        # self.right_motor = Motor('right_motor')
         self.motor_semaphore = Semaphore(1)
         self.walker_data_semaphore = Semaphore(1)
         self.human_data_semaphore = Semaphore(1)
@@ -65,7 +65,7 @@ class Walker:
         self.gear_ratio = float(config.get('motor_config', 'gear_ratio'))
         self.wheel_radius = float(config.get('motor_config', 'wheel_radius'))
         self.wheel_dist = float(config.get('motor_config', 'wheel_distance'))
-        self.cam_timer = timer(0.01, self.image_process)
+        self.cam_timer = timer(0.05, self.image_process)
         self.cam_timer.daemon = True
         self.encoder_timer = timer(0.05, self.get_walker_information)
         self.cam_timer.daemon = True
@@ -76,8 +76,11 @@ class Walker:
 
     def run(self):
         self.cam_timer.start()
-        self.encoder_timer.start()
-        self.command_timer.start()
+        time.sleep(5)
+        # wait 5 secs to let the camera track the feet
+
+        # self.encoder_timer.start()
+        # self.command_timer.start()
         while True:
             pass
             # get the shoe detection result from image and the POS information from encoder
@@ -92,8 +95,10 @@ class Walker:
             cv2.imshow('Read_image', image_frame)
             keyboard_ret = cv2.waitKey(1)
             if keyboard_ret == 27:
-                self.command_timer.cancel()
-                self.encoder_timer.cancel()
+                if self.command_timer.is_alive():
+                    self.command_timer.cancel()
+                if self.encoder_timer.is_alive():
+                    self.encoder_timer.cancel()
                 self.cam_timer.cancel()
         # process the shoe detection
         pro_image, mask, human_pos_walker_frame, human_ang_walker_frame = self.shoe_detection.detect(image_frame)

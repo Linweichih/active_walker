@@ -68,11 +68,13 @@ class ShoeDetection:
         outputs = outputs.clone()
         outputs = outputs.mul(255).byte()
         outputs = outputs.cpu().numpy().squeeze(0).transpose((1, 2, 0))
+
         # mask_gray = cv2.cvtColor(outputs, cv2.COLOR_BGR2GRAY)
         right_mask = outputs[:, :, 2]
         left_mask = outputs[:, :, 1]
         right_pos, right_angle, right_bbox = self.right_shoe_track.update(right_mask)
         left_pos, left_angle, left_bbox = self.left_shoe_track.update(left_mask)
+
         if left_angle > 1.7 and right_angle > 1.7:
             no_foot_flag = True
         if not no_foot_flag:
@@ -96,7 +98,6 @@ class ShoeDetection:
             # print("left box:", left_bbox)
             if left_bbox.all() != 0:
                 processed_image = cv2.drawContours(processed_image, [left_bbox], -1, (0, 120, 120), 3)
-
             print("Use {} sec to process a image".format(time.time() - t_s))
             return processed_image, outputs, self.human_position, self.human_angle
         else:
