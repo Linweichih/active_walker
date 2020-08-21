@@ -53,8 +53,7 @@ class Walker:
         self.walker_x = 0
         self.walker_y = 0
         self.walker_theta = 0
-        # self.left_motor = Motor('left_motor')
-        # self.right_motor = Motor('right_motor')
+        self.motor_serial = MotorSerial()
         self.motor_semaphore = Semaphore(1)
         self.walker_data_semaphore = Semaphore(1)
         self.human_data_semaphore = Semaphore(1)
@@ -65,7 +64,7 @@ class Walker:
         self.gear_ratio = float(config.get('motor_config', 'gear_ratio'))
         self.wheel_radius = float(config.get('motor_config', 'wheel_radius'))
         self.wheel_dist = float(config.get('motor_config', 'wheel_distance'))
-        self.cam_timer = timer(0.05, self.image_process)
+        self.cam_timer = timer(0.03, self.image_process)
         self.cam_timer.daemon = True
         self.encoder_timer = timer(0.05, self.get_walker_information)
         self.cam_timer.daemon = True
@@ -76,10 +75,10 @@ class Walker:
 
     def run(self):
         self.cam_timer.start()
-        time.sleep(5)
+        time.sleep(10)
         # wait 5 secs to let the camera track the feet
-        # self.encoder_timer.start()
-        # self.command_timer.start()
+        self.encoder_timer.start()
+        self.command_timer.start()
         while True:
             time.sleep(1)
             # get the shoe detection result from image and the POS information from encoder
@@ -104,6 +103,7 @@ class Walker:
         cv2.imshow('Processed_image', pro_image)
         cv2.imshow('detection_mask', mask)
         human_pos, human_ang = img2real_transform(human_pos_walker_frame, human_ang_walker_frame)
+        time_stamp = -2
         if self.human_data_semaphore.acquire():
             time_stamp = self.human_state.time_stamp
             self.human_data_semaphore.release()
@@ -112,8 +112,10 @@ class Walker:
             if self.human_data_semaphore.acquire():
                 self.human_state.time_stamp = time.time()
                 self.human_data_semaphore.release()
+        elif time_stamp == -2:
+            print("time_stamp semaphore is error")
+            sys.exit()
         else:
-            time_interval = time.time() - time_stamp
             if self.human_data_semaphore.acquire():
                 self.human_state.v = human_pos[1] - self.human_state.y
                 self.human_state.omega = human_ang - self.human_state.theta
@@ -154,12 +156,12 @@ class Walker:
 
         if self.motor_semaphore.acquire():
             print("l_cmd:", left_cmd, "r_cmd:", right_cmd)
-            self.left_motor.send_cmd(left_cmd)
-            self.right_motor.send_cmd(right_cmd)
+            self.motor_serial.send_cmd("left_motor", left_cmd)
+            self.motor_serial.send_cmd("right_motor", right_cmd)
             self.motor_semaphore.release()
 
     def get_walker_information(self):
-
+        time_stamp = -2
         if self.walker_data_semaphore.acquire():
             time_stamp = self.walker_state.time_stamp
             self.walker_data_semaphore.release()
@@ -167,8 +169,8 @@ class Walker:
             # not first time record
             if self.motor_semaphore.acquire():
                 print("get encoder information!!")
-                pulse_l = self.left_motor.get_motor_pos()
-                pulse_r = self.right_motor.get_motor_pos()
+                pulse_l = self.motor_serial.get_motor_pos("left_motor")
+                pulse_r = self.motor_serial.get_motor_pos("right_motor")
                 self.motor_semaphore.release()
 
             timer_interval = time.time() - time_stamp
@@ -184,11 +186,12 @@ class Walker:
                 self.walker_state.theta += self.walker_state.omega * timer_interval
                 self.walker_state.time_stamp = time.time()
                 self.walker_data_semaphore.release()
-
+        elif time_stamp == -2:
+            print("time_stamp semaphore is error")
+            sys.exit()
         else:
             # first time record the encoder information
             if self.walker_data_semaphore.acquire():
                 self.walker_state.time_stamp = time.time()
                 self.walker_data_semaphore.release()
-
 

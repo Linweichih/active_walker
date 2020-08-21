@@ -57,7 +57,7 @@ class ObjectTrack:
         # implement kalman filter
         current_measurement = np.array(
             [[np.float32(self.position[0])], [np.float32(self.position[1])], [np.float32(self.angle)]])
-        print(current_measurement)
+        # print(current_measurement)
         if self.position[0] > 0:
             self.kalman.correct(current_measurement)
         pose = self.kalman.predict()

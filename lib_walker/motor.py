@@ -8,26 +8,38 @@ parent_dir = os.path.dirname(os.path.abspath(__file__))
 config.read(parent_dir + '/device.cfg')
 
 
-class Motor:
-    def __init__(self, motor_name):
-        self.com_port = config.get(motor_name, 'PortName')
-        self.baud_rate = int(config.get(motor_name, 'BaudRate'))
-        self.time_out = int(config.get(motor_name, 'Read_timeout'))
+class MotorSerial:
+    def __init__(self):
+        self.com_port = config.get('motor_serial', 'PortName')
+        self.baud_rate = int(config.get('motor_serial', 'BaudRate'))
+        self.time_out = int(config.get('motor_serial', 'Read_timeout'))
+        self.right_motor_node_name = config.get('motor_serial', 'right_motor_node_name')
+        self.left_motor_node_name = config.get('motor_serial', 'left_motor_node_name')
         try:
             self.serial = serial.Serial(self.com_port, self.baud_rate, timeout=self.time_out)
         except serial.SerialException:
             print("Connect to {} serial error!!", self.com_port)
             sys.exit()
-        # set acceleration maximum
-        self.send_cmd("AC10")
-        self.send_cmd("DEC100")
+        # enable the driver of the motor
+        self.send_cmd("left_motor", "EN")
+        self.send_cmd("right_motor", "EN")
+        # set acceleration and deceleration
+        self.send_cmd("left_motor", "AC10")
+        self.send_cmd("left_motor", "DEC100")
+        self.send_cmd("right_motor", "AC100")
+        self.send_cmd("right_motor", "DEC10")
         # try to send the cmd to motor
         for i in range(5):
-            self.send_cmd("V0")
-        print(motor_name, "'s serial initialize")
+            self.send_cmd("right_motor", "V0")
+            self.send_cmd("left_motor", "V0")
 
-    def send_cmd(self, cmd):
-        motor_cmd = cmd + "\n\r\0"
+        print('motor_serial', "'s serial initialize")
+
+    def send_cmd(self, motor_name, cmd):
+        if motor_name == 'right_motor':
+            motor_cmd = str(self.right_motor_node_name) + cmd + "\n\r\0"
+        else:
+            motor_cmd = str(self.left_motor_node_name) + cmd + "\n\r\0"
         if self.serial.isOpen():
             try:
                 self.serial.write(motor_cmd.encode())
@@ -43,8 +55,11 @@ class Motor:
         else:
             print("The serial is not open")
 
-    def get_motor_pos(self):
-        motor_cmd = "POS\n\r\0"
+    def get_motor_pos(self, motor_name):
+        if motor_name == 'right_motor':
+            motor_cmd = str(self.right_motor_node_name) + "POS\n\r\0"
+        else:
+            motor_cmd = str(self.left_motor_node_name) + "POS\n\r\0"
         if self.serial.isOpen():
             try:
                 self.serial.write(motor_cmd.encode())
@@ -60,15 +75,20 @@ class Motor:
             print("The serial is not open")
 
     def close(self):
-        self.send_cmd("V0")
+        self.send_cmd("right_motor", "V0")
+        self.send_cmd("left_motor", "V0")
+        self.send_cmd("right_motor", "DI")
+        self.send_cmd("left_motor", "DI")
         self.serial.close()
 
 
 if __name__ == '__main__':
-    motor = Motor('right_motor')
-    motor.send_cmd("V50")
+    motor = MotorSerial()
+    motor.send_cmd("right_motor", "V100")
+    motor.send_cmd("left_motor", "V100")
     time.sleep(3)
-    motor.send_cmd("V0")
+    motor.send_cmd("right_motor", "V0")
+    motor.send_cmd("left_motor", "V0")
     time.sleep(1)
     motor.close()
     sys.exit()
