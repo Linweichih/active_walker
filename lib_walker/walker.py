@@ -38,6 +38,8 @@ def get_desired_pose(human_dist, human_angle):
 
 class Walker:
     def __init__(self):
+        self.stop_sys_flag = 0
+
         self.MAX_W = float(config.get('motor_config', 'max_omega'))
         self.MAX_V = float(config.get('motor_config', 'max_velocity'))
         self.K_1 = float(config.get('controller_config', 'K_1'))
@@ -76,13 +78,15 @@ class Walker:
     def run(self):
         self.cam_timer.start()
         time.sleep(10)
-        # wait 5 secs to let the camera track the feet
+        # wait several secs to let the camera track the feet
         self.encoder_timer.start()
         self.command_timer.start()
+        input("Press Enter to continue...")
+        print("END")
         while True:
-            time.sleep(1)
-            # get the shoe detection result from image and the POS information from encoder
-            # Controller Part Start here
+            time.sleep(3)
+            if self.stop_sys_flag == 1:
+                self.motor_serial.close()
 
     def image_process(self):
         cv2.namedWindow('Read_image', flags=cv2.WINDOW_NORMAL | cv2.WINDOW_KEEPRATIO | cv2.WINDOW_GUI_EXPANDED)
@@ -97,7 +101,9 @@ class Walker:
                     self.command_timer.cancel()
                 if self.encoder_timer.is_alive():
                     self.encoder_timer.cancel()
+                self.stop_sys_flag = 1
                 self.cam_timer.cancel()
+
         # process the shoe detection
         pro_image, mask, human_pos_walker_frame, human_ang_walker_frame = self.shoe_detection.detect(image_frame)
         cv2.imshow('Processed_image', pro_image)
