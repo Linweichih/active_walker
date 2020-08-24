@@ -67,7 +67,7 @@ class ObjectTrack:
         return self.position, self.angle, bbox
 
     def find_center_angle(self, mask):
-        center = [0, 0]
+        center = [0, 200]
         box = np.array([[0, 0], [0, 0], [0, 0], [0, 0]])
         center[0] = self.kalman.statePost[0]
         center[1] = self.kalman.statePost[1]

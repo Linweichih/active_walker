@@ -7,6 +7,21 @@ from threading import Semaphore
 import math
 
 
+def rotate(image, angle, center=None, scale=1.0):
+    # 获取图像尺寸
+    (h, w) = image.shape[:2]
+
+    # 若未指定旋转中心，则将图像中心设为旋转中心
+    if center is None:
+        center = (w / 2, h / 2)
+
+    # 执行旋转
+    M = cv2.getRotationMatrix2D(center, angle, scale)
+    rotated = cv2.warpAffine(image, M, (w, h))
+
+    # 返回旋转后的图像
+    return rotated
+
 def img2real_transform(human_pos_walker_frame, human_ang_walker_frame):
     """
         real transform will depend on the camera placed
@@ -81,12 +96,8 @@ class Walker:
         # wait several secs to let the camera track the feet
         self.encoder_timer.start()
         self.command_timer.start()
-        input("Press Enter to continue...")
-        print("END")
         while True:
-            time.sleep(3)
-            if self.stop_sys_flag == 1:
-                self.motor_serial.close()
+            time.sleep(1)
 
     def image_process(self):
         cv2.namedWindow('Read_image', flags=cv2.WINDOW_NORMAL | cv2.WINDOW_KEEPRATIO | cv2.WINDOW_GUI_EXPANDED)
@@ -98,10 +109,11 @@ class Walker:
             keyboard_ret = cv2.waitKey(1)
             if keyboard_ret == 27:
                 if self.command_timer.is_alive():
+                    print("shut down the command timer")
                     self.command_timer.cancel()
                 if self.encoder_timer.is_alive():
+                    print("shut down the encoder_timer")
                     self.encoder_timer.cancel()
-                self.stop_sys_flag = 1
                 self.cam_timer.cancel()
 
         # process the shoe detection
@@ -137,7 +149,7 @@ class Walker:
             robot_vel = self.walker_state.v
             robot_angle_vel = self.walker_state.omega
             self.walker_data_semaphore.release()
-        # Position control
+        # Position control ignore the velocity
         desired_vel = robot_vel
         desired_angle_vel = robot_angle_vel
 
@@ -145,10 +157,12 @@ class Walker:
             human_dist = self.human_state.y
             human_angle = self.human_state.theta
             self.human_data_semaphore.release()
+        # to make the image invert
+        human_dist = 384 - human_dist
         desired_dist, desired_angle = get_desired_pose(human_dist, human_angle)
         accel = -self.K_1 * (robot_vel - desired_vel) - self.K_2 * (human_dist - desired_dist)
         angle_accel = -self.K_3 * (robot_angle_vel - desired_angle_vel) - self.K_4 * (human_angle - desired_angle)
-        print("accel:", accel, "angle_accel", angle_accel)
+        print("DIST_error:", (human_dist - desired_dist), "accel:", accel, "angle_accel", angle_accel)
         v = robot_vel + accel * timer_interval
         omega = robot_angle_vel + angle_accel * timer_interval
         if v > self.MAX_V:
@@ -161,7 +175,7 @@ class Walker:
         left_cmd = "V" + str(int(desire_rpm_l))
 
         if self.motor_semaphore.acquire():
-            print("l_cmd:", left_cmd, "r_cmd:", right_cmd)
+            print("V:", v, "omega:", omega, "l_cmd:", left_cmd, "r_cmd:", right_cmd)
             self.motor_serial.send_cmd("left_motor", left_cmd)
             self.motor_serial.send_cmd("right_motor", right_cmd)
             self.motor_semaphore.release()
