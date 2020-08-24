@@ -7,21 +7,6 @@ from threading import Semaphore
 import math
 
 
-def rotate(image, angle, center=None, scale=1.0):
-    # 获取图像尺寸
-    (h, w) = image.shape[:2]
-
-    # 若未指定旋转中心，则将图像中心设为旋转中心
-    if center is None:
-        center = (w / 2, h / 2)
-
-    # 执行旋转
-    M = cv2.getRotationMatrix2D(center, angle, scale)
-    rotated = cv2.warpAffine(image, M, (w, h))
-
-    # 返回旋转后的图像
-    return rotated
-
 def img2real_transform(human_pos_walker_frame, human_ang_walker_frame):
     """
         real transform will depend on the camera placed
@@ -175,7 +160,7 @@ class Walker:
         left_cmd = "V" + str(int(desire_rpm_l))
 
         if self.motor_semaphore.acquire():
-            print("V:", v, "omega:", omega, "l_cmd:", left_cmd, "r_cmd:", right_cmd)
+            print("V:", v, "omega:", omega, "l_cmd:", left_cmd, "r_cmd:", right_cmd, "time stamp:", time.time())
             self.motor_serial.send_cmd("left_motor", left_cmd)
             self.motor_serial.send_cmd("right_motor", right_cmd)
             self.motor_semaphore.release()
