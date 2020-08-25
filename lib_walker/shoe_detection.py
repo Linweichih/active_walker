@@ -82,7 +82,7 @@ class ShoeDetection:
             self.human_position[1] = right_pos[1] / 2 + left_pos[1] / 2
             self.human_angle = right_angle + (left_angle - right_angle) / 2
 
-            print("human_position:", self.human_position, "    human_angle:", self.human_angle)
+            # print("human_position:", self.human_position, "    human_angle:", self.human_angle)
             # image = self.bridge.cv2_to_imgmsg(processed_image,"bgr8")
 
             # put the human pos and angle onto image
@@ -98,7 +98,7 @@ class ShoeDetection:
             # print("left box:", left_bbox)
             if left_bbox.all() != 0:
                 processed_image = cv2.drawContours(processed_image, [left_bbox], -1, (0, 120, 120), 3)
-            print("Use {} sec to process a image".format(time.time() - t_s))
+            # print("Use {} sec to process a image".format(time.time() - t_s))
             return processed_image, outputs, self.human_position, self.human_angle
         else:
             return resized_image

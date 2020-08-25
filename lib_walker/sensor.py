@@ -3,6 +3,7 @@ import sys
 import os
 import configparser
 import serial
+import matplotlib.pyplot as plt
 config = configparser.ConfigParser()
 parent_dir = os.path.dirname(os.path.abspath(__file__))
 config.read(parent_dir + '/device.cfg')
@@ -51,6 +52,6 @@ if __name__ == '__main__':
         cam.cap.release()
         print("")
         print("User Pressed Keyboard ctrl-c")
-        cv2.destroyAllWindows()
+        # cv2.destroyAllWindows()
         sys.exit()
 

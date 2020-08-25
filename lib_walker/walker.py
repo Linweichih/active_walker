@@ -32,7 +32,7 @@ def get_desired_pose(human_dist, human_angle):
     elif human_angle < ANGLE_MIN:
         desired_angle = ANGLE_MIN
     else:
-        desired_angle = human_dist
+        desired_angle = human_angle
     return desired_dist, desired_angle
 
 
@@ -79,7 +79,7 @@ class Walker:
         self.cam_timer.start()
         time.sleep(10)
         # wait several secs to let the camera track the feet
-        self.encoder_timer.start()
+        # self.encoder_timer.start()
         self.command_timer.start()
         while True:
             time.sleep(1)
@@ -106,6 +106,8 @@ class Walker:
         cv2.imshow('Processed_image', pro_image)
         cv2.imshow('detection_mask', mask)
         human_pos, human_ang = img2real_transform(human_pos_walker_frame, human_ang_walker_frame)
+        human_pos[1] = 384 - human_pos[1]
+        human_ang = -1 * human_ang
         time_stamp = -2
         if self.human_data_semaphore.acquire():
             time_stamp = self.human_state.time_stamp
@@ -120,12 +122,15 @@ class Walker:
             sys.exit()
         else:
             if self.human_data_semaphore.acquire():
-                self.human_state.v = human_pos[1] - self.human_state.y
-                self.human_state.omega = human_ang - self.human_state.theta
+                time_interval = time.time() - self.human_state.time_stamp
+                self.human_state.v = (human_pos[1] - self.human_state.y) / time_interval
+                self.human_state.omega = (human_ang - self.human_state.theta)/time_interval
                 self.human_state.y = human_pos[1]
                 self.human_state.x = human_pos[0]
                 self.human_state.theta = human_ang
                 self.human_state.time_stamp = time.time()
+                print("DIST", self.human_state.y, "angle:", self.human_state.theta,
+                      "\nv:", self.human_state.v, "omega:", self.human_state.omega)
                 self.human_data_semaphore.release()
 
     def controller(self):
@@ -142,18 +147,18 @@ class Walker:
             human_dist = self.human_state.y
             human_angle = self.human_state.theta
             self.human_data_semaphore.release()
-        # to make the image invert
-        human_dist = 384 - human_dist
+
         desired_dist, desired_angle = get_desired_pose(human_dist, human_angle)
         accel = -self.K_1 * (robot_vel - desired_vel) - self.K_2 * (human_dist - desired_dist)
         angle_accel = -self.K_3 * (robot_angle_vel - desired_angle_vel) - self.K_4 * (human_angle - desired_angle)
-        print("DIST_error:", (human_dist - desired_dist), "accel:", accel, "angle_accel", angle_accel)
         v = robot_vel + accel * timer_interval
         omega = robot_angle_vel + angle_accel * timer_interval
         if v > self.MAX_V:
             v = self.MAX_V
         if omega > self.MAX_W:
             omega = self.MAX_W
+        print("DIST_error:", (human_dist - desired_dist), "ANGLE ERROR:", (human_angle - desired_angle),
+              "\naccel:", accel, "angle_accel", angle_accel)
         desire_rpm_l = (2 * v - omega * self.wheel_dist) / (2 * self.wheel_dist) / math.pi / 2 * 60 * self.gear_ratio
         desire_rpm_r = (2 * v + omega * self.wheel_dist) / (2 * self.wheel_dist) / math.pi / 2 * 60 * self.gear_ratio
         right_cmd = "V" + str(-1*int(desire_rpm_r))
@@ -173,7 +178,7 @@ class Walker:
         if time_stamp != -1:
             # not first time record
             if self.motor_semaphore.acquire():
-                print("get encoder information!!")
+                # print("get encoder information!!")
                 pulse_l = self.motor_serial.get_motor_pos("left_motor")
                 pulse_r = self.motor_serial.get_motor_pos("right_motor")
                 self.motor_semaphore.release()
