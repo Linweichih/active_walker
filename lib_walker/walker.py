@@ -94,6 +94,7 @@ class Walker:
             keyboard_ret = cv2.waitKey(1)
             if keyboard_ret == 27:
                 if self.command_timer.is_alive():
+                    self.motor_serial.close()
                     print("shut down the command timer")
                     self.command_timer.cancel()
                 if self.encoder_timer.is_alive():
@@ -130,7 +131,7 @@ class Walker:
                 self.human_state.theta = human_ang
                 self.human_state.time_stamp = time.time()
                 print("DIST", self.human_state.y, "angle:", self.human_state.theta,
-                      "\nv:", self.human_state.v, "omega:", self.human_state.omega)
+                      "\nhuman_v:", self.human_state.v, "human_omega:", self.human_state.omega)
                 self.human_data_semaphore.release()
 
     def controller(self):
@@ -146,11 +147,13 @@ class Walker:
         if self.human_data_semaphore.acquire():
             human_dist = self.human_state.y
             human_angle = self.human_state.theta
+            relative_v = self.human_state.v
+            relative_omega = self.human_state.omega
             self.human_data_semaphore.release()
 
         desired_dist, desired_angle = get_desired_pose(human_dist, human_angle)
-        accel = -self.K_1 * (robot_vel - desired_vel) - self.K_2 * (human_dist - desired_dist)
-        angle_accel = -self.K_3 * (robot_angle_vel - desired_angle_vel) - self.K_4 * (human_angle - desired_angle)
+        accel = -self.K_1 * relative_v - self.K_2 * (human_dist - desired_dist)
+        angle_accel = -self.K_3 * relative_omega - self.K_4 * (human_angle - desired_angle)
         v = robot_vel + accel * timer_interval
         omega = robot_angle_vel + angle_accel * timer_interval
         if v > self.MAX_V:
