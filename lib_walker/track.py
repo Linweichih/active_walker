@@ -37,11 +37,11 @@ class ObjectTrack:
              [0, 0, 0, 0, 0, 1]], np.float32)
         self.kalman.processNoiseCov = np.array(
             [[1, 0, 0, 0, 0, 0], [0, 1, 0, 0, 0, 0], [0, 0, 1, 0, 0, 0], [0, 0, 0, 1, 0, 0], [0, 0, 0, 0, 1, 0],
-             [0, 0, 0, 0, 0, 1]], np.float32) * 0.001
-        self.kalman.measurementNoiseCov = np.array([[1, 0, 0], [0, 1, 0], [0, 0, 1]], np.float32) * 0.001
+             [0, 0, 0, 0, 0, 1]], np.float32) * 0.0001
+        self.kalman.measurementNoiseCov = np.array([[1, 0, 0], [0, 1, 0], [0, 0, 1]], np.float32) * 0.01
         # filter the image of feet in the rec that the feet will appear
         self.filter_kernel = np.zeros(INPUT_IMG_SIZE, np.uint8)
-        self.filter_kernel[0:384, 100:400] = 255
+        # self.filter_kernel[0:384, 100:400] = 255
         # set the open/close operation kernel
         self.open_kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (30, 30))
         self.close_kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (20, 20))

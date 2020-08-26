@@ -44,7 +44,6 @@ if __name__ == '__main__':
             if ret:
                 cv2.imshow('image_win', frame)
                 key = cv2.waitKey(1)
-
             else:
                 print("fail to get USB CAM")
                 break

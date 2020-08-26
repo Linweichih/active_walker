@@ -86,7 +86,7 @@ if __name__ == '__main__':
     motor = MotorSerial()
     motor.send_cmd("right_motor", "V100")
     motor.send_cmd("left_motor", "V100")
-    time.sleep(1)
+    time.sleep(2)
     motor.send_cmd("right_motor", "V0")
     motor.send_cmd("left_motor", "V0")
     time.sleep(1)
