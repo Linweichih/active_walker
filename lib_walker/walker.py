@@ -175,8 +175,8 @@ class Walker:
               "relative_v:", relative_v, "relative_w:", relative_omega,
               "\naccel:", accel, "angle_accel", angle_accel,
               "pre_v:", robot_vel, "pre_omega:", robot_angle_vel)
-        desire_rpm_l = (2 * v - omega * self.wheel_dist) / (2 * self.wheel_dist) / math.pi / 2 * 60 * self.gear_ratio
-        desire_rpm_r = (2 * v + omega * self.wheel_dist) / (2 * self.wheel_dist) / math.pi / 2 * 60 * self.gear_ratio
+        desire_rpm_l = (2 * v - omega * self.wheel_dist) / (2 * self.wheel_radius) / math.pi / 2 * 60 * self.gear_ratio
+        desire_rpm_r = (2 * v + omega * self.wheel_dist) / (2 * self.wheel_radius) / math.pi / 2 * 60 * self.gear_ratio
         right_cmd = "V" + str(-1*int(desire_rpm_r))
         left_cmd = "V" + str(int(desire_rpm_l))
 

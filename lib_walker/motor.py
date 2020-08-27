@@ -3,6 +3,7 @@ import configparser
 import os
 import time
 import sys
+import math
 config = configparser.ConfigParser()
 parent_dir = os.path.dirname(os.path.abspath(__file__))
 config.read(parent_dir + '/device.cfg')
@@ -84,11 +85,14 @@ class MotorSerial:
 
 if __name__ == '__main__':
     motor = MotorSerial()
-    motor.send_cmd("right_motor", "V100")
-    motor.send_cmd("left_motor", "V100")
-    time.sleep(2)
-    motor.send_cmd("right_motor", "V0")
-    motor.send_cmd("left_motor", "V0")
-    time.sleep(1)
+    mo_v = 0.2
+    mo_omega = 0
+    desire_l = (2 * mo_v - mo_omega * 0.6) / (2 * 0.0625) / math.pi / 2 * 60 * 14
+    desire_r = (2 * mo_v + mo_omega * 0.6) / (2 * 0.0625) / math.pi / 2 * 60 * 14
+    right_cmd = "V" + str(-1 * int(desire_r))
+    left_cmd = "V" + str(int(desire_l))
+    motor.send_cmd("left_motor", left_cmd)
+    motor.send_cmd("right_motor", right_cmd)
+    time.sleep(3)
     motor.close()
     sys.exit()
