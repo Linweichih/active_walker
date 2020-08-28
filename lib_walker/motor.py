@@ -26,8 +26,8 @@ class MotorSerial:
         self.send_cmd("right_motor", "EN")
         # set acceleration and deceleration
         self.send_cmd("left_motor", "AC10")
-        self.send_cmd("left_motor", "DEC100")
-        self.send_cmd("right_motor", "AC100")
+        self.send_cmd("left_motor", "DEC10")
+        self.send_cmd("right_motor", "AC10")
         self.send_cmd("right_motor", "DEC10")
         # try to send the cmd to motor
         for i in range(5):
@@ -85,7 +85,7 @@ class MotorSerial:
 
 if __name__ == '__main__':
     motor = MotorSerial()
-    mo_v = 0.2
+    mo_v = 0.3
     mo_omega = 0
     desire_l = (2 * mo_v - mo_omega * 0.6) / (2 * 0.0625) / math.pi / 2 * 60 * 14
     desire_r = (2 * mo_v + mo_omega * 0.6) / (2 * 0.0625) / math.pi / 2 * 60 * 14
