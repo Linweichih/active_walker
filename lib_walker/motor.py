@@ -4,6 +4,7 @@ import os
 import time
 import sys
 import math
+import numpy as np
 config = configparser.ConfigParser()
 parent_dir = os.path.dirname(os.path.abspath(__file__))
 config.read(parent_dir + '/device.cfg')
@@ -68,7 +69,7 @@ class MotorSerial:
                 print("Can not send motor message")
             try:
                 ret_str = self.serial.readline()
-                return int(ret_str)
+                return int(ret_str, 16)
             except serial.SerialException:
                 print("Can not send motor message")
 
@@ -91,8 +92,13 @@ if __name__ == '__main__':
     desire_r = (2 * mo_v + mo_omega * 0.6) / (2 * 0.0625) / math.pi / 2 * 60 * 14
     test_right_cmd = "V" + str(-1 * int(desire_r))
     test_left_cmd = "V" + str(int(desire_l))
+    pre_pulse_l = motor.get_motor_pos("left_motor")
+    pre_pulse_r = motor.get_motor_pos("right_motor")
     motor.send_cmd("left_motor", test_left_cmd)
     motor.send_cmd("right_motor", test_right_cmd)
-    time.sleep(1)
+    time.sleep(2)
+    pulse_l = motor.get_motor_pos("left_motor")
+    pulse_r = motor.get_motor_pos("right_motor")
+    print(pulse_r-pre_pulse_r, pulse_l-pre_pulse_l)
     motor.close()
     sys.exit()

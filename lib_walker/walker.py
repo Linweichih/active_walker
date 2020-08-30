@@ -89,7 +89,7 @@ class Walker:
     def image_process(self):
         # cv2.namedWindow('Read_image', flags=cv2.WINDOW_NORMAL | cv2.WINDOW_KEEPRATIO | cv2.WINDOW_GUI_EXPANDED)
         cv2.namedWindow('Processed_image', flags=cv2.WINDOW_NORMAL | cv2.WINDOW_KEEPRATIO | cv2.WINDOW_GUI_EXPANDED)
-        # cv2.namedWindow('detection_mask', flags=cv2.WINDOW_NORMAL | cv2.WINDOW_KEEPRATIO | cv2.WINDOW_GUI_EXPANDED)
+        cv2.namedWindow('detection_mask', flags=cv2.WINDOW_NORMAL | cv2.WINDOW_KEEPRATIO | cv2.WINDOW_GUI_EXPANDED)
         ret_flag, image_frame = self.cam.read()
         if ret_flag:
             # cv2.imshow('Read_image', image_frame)
@@ -109,8 +109,11 @@ class Walker:
 
         # process the shoe detection
         pro_image, mask, human_pos_walker_frame, human_ang_walker_frame = self.shoe_detection.detect(image_frame)
+        image_frame = cv2.resize(image_frame, (512, 384))
+        mask = cv2.resize(mask, (512, 384))
+        # mask = np.concatenate((image_frame, mask), axis=1)
         cv2.imshow('Processed_image', pro_image)
-        # cv2.imshow('detection_mask', mask)
+        cv2.imshow('detection_mask', mask)
         human_pos, human_ang = img2real_transform(human_pos_walker_frame, human_ang_walker_frame)
         human_pos[1] = 384 - human_pos[1]
         # human_ang = -1 * human_ang
