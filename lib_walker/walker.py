@@ -57,7 +57,7 @@ class Walker:
         self.walker_x = 0
         self.walker_y = 0
         self.walker_theta = 0
-        # self.motor_serial = MotorSerial()
+        self.motor_serial = MotorSerial()
         self.motor_semaphore = Semaphore(1)
         self.walker_data_semaphore = Semaphore(1)
         self.human_data_semaphore = Semaphore(1)
@@ -79,10 +79,10 @@ class Walker:
 
     def run(self):
         self.cam_timer.start()
-        #self.encoder_timer.start()
+        self.encoder_timer.start()
         time.sleep(10)
         # wait several secs to let the camera track the feet
-        # self.command_timer.start()
+        self.command_timer.start()
         while True:
             time.sleep(1)
 
@@ -222,4 +222,3 @@ class Walker:
             if self.walker_data_semaphore.acquire():
                 self.walker_state.time_stamp = time.time()
                 self.walker_data_semaphore.release()
-

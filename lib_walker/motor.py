@@ -89,10 +89,10 @@ if __name__ == '__main__':
     mo_omega = 0
     desire_l = (2 * mo_v - mo_omega * 0.6) / (2 * 0.0625) / math.pi / 2 * 60 * 14
     desire_r = (2 * mo_v + mo_omega * 0.6) / (2 * 0.0625) / math.pi / 2 * 60 * 14
-    right_cmd = "V" + str(-1 * int(desire_r))
-    left_cmd = "V" + str(int(desire_l))
-    motor.send_cmd("left_motor", left_cmd)
-    motor.send_cmd("right_motor", right_cmd)
+    test_right_cmd = "V" + str(-1 * int(desire_r))
+    test_left_cmd = "V" + str(int(desire_l))
+    motor.send_cmd("left_motor", test_left_cmd)
+    motor.send_cmd("right_motor", test_right_cmd)
     time.sleep(3)
     motor.close()
     sys.exit()
