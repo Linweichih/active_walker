@@ -93,6 +93,6 @@ if __name__ == '__main__':
     test_left_cmd = "V" + str(int(desire_l))
     motor.send_cmd("left_motor", test_left_cmd)
     motor.send_cmd("right_motor", test_right_cmd)
-    time.sleep(3)
+    time.sleep(1)
     motor.close()
     sys.exit()
