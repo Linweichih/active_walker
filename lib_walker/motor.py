@@ -26,8 +26,8 @@ class MotorSerial:
         self.send_cmd("left_motor", "EN")
         self.send_cmd("right_motor", "EN")
         # set acceleration and deceleration
-        self.send_cmd("left_motor", "AC10")
-        self.send_cmd("left_motor", "DEC10")
+        self.send_cmd("left_motor", "AC10")     # almost 0.3 m/s^2
+        self.send_cmd("left_motor", "DEC10")    # almost -0.3 m/s^2
         self.send_cmd("right_motor", "AC10")
         self.send_cmd("right_motor", "DEC10")
         # try to send the cmd to motor
@@ -69,7 +69,7 @@ class MotorSerial:
                 print("Can not send motor message")
             try:
                 ret_str = self.serial.readline()
-                return int(ret_str, 16)
+                return int(ret_str)
             except serial.SerialException:
                 print("Can not send motor message")
 
@@ -97,8 +97,8 @@ if __name__ == '__main__':
     motor.send_cmd("left_motor", test_left_cmd)
     motor.send_cmd("right_motor", test_right_cmd)
     time.sleep(2)
-    pulse_l = motor.get_motor_pos("left_motor")
-    pulse_r = motor.get_motor_pos("right_motor")
-    print(pulse_r-pre_pulse_r, pulse_l-pre_pulse_l)
+    #pulse_l = motor.get_motor_pos("left_motor")
+    #pulse_r = motor.get_motor_pos("right_motor")
+    #print(pulse_r-pre_pulse_r, pulse_l-pre_pulse_l)
     motor.close()
     sys.exit()

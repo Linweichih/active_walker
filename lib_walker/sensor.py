@@ -23,6 +23,9 @@ class UsbCam:
         ret, frame = self.cap.read()
         return ret, frame
 
+    def release(self):
+        self.cap.release()
+
 
 class ForceSensor:
     def __init__(self):
