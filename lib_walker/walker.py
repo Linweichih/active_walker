@@ -5,6 +5,7 @@ from lib_walker.timer import *
 from lib_walker.shoe_detection import *
 from threading import Semaphore
 import math
+import pandas as pd
 
 
 def img2real_transform(human_pos_walker_frame, human_ang_walker_frame):
@@ -40,6 +41,14 @@ class Walker:
     def __init__(self):
         self.time_start = 0
         self.stop_sys_flag = 0
+
+        # init csv file to write
+        self.walker_data = {'time': [],
+                            'x': [], 'y': [], 'theta': [],
+                            'v': [], 'omega': []}
+        self.human_data = {'time': [],
+                           'x': [], 'y': [], 'theta': [],
+                           'v': [], 'omega': []}
 
         self.MAX_W = float(config.get('motor_config', 'max_omega'))
         self.MAX_V = float(config.get('motor_config', 'max_velocity'))
@@ -80,10 +89,14 @@ class Walker:
 
     def run(self):
         self.cam_timer.start()
+        self.time_start = time.time()
+        self.motor_serial.send_cmd("right_motor", "DI")
+        self.motor_serial.send_cmd("left_motor", "DI")
         self.encoder_timer.start()
         time.sleep(5)
         # wait several secs to let the camera track the feet
-        self.command_timer.start()
+
+        # self.command_timer.start()
 
         while True:
             time.sleep(1)
@@ -91,6 +104,11 @@ class Walker:
                 self.motor_serial.close()
                 time.sleep(2)
                 break
+        walker_df = pd.DataFrame(self.walker_data)
+        human_df = pd.DataFrame(self.human_data)
+        walker_df.to_csv("./Data_Result/walker_data.csv", sep='\t')
+        human_df.to_csv("./Data_Result/human_data.csv", sep='\t')
+        print("Record the data's csv file!!")
 
     def image_process(self):
         # cv2.namedWindow('Read_image', flags=cv2.WINDOW_NORMAL | cv2.WINDOW_KEEPRATIO | cv2.WINDOW_GUI_EXPANDED)
@@ -103,8 +121,6 @@ class Walker:
             if keyboard_ret == 27:
                 time.sleep(1)
                 if self.command_timer.is_alive():
-                    if self.motor_semaphore.acquire():
-                        self.motor_semaphore.release()
                     print("shut down the command timer")
                     self.command_timer.cancel()
                 if self.encoder_timer.is_alive():
@@ -116,7 +132,7 @@ class Walker:
 
         # process the shoe detection
         pro_image, mask, human_pos_walker_frame, human_ang_walker_frame = self.shoe_detection.detect(image_frame)
-        image_frame = cv2.resize(image_frame, (512, 384))
+        # image_frame = cv2.resize(image_frame, (512, 384))
         mask = cv2.resize(mask, (512, 384))
         # mask = np.concatenate((image_frame, mask), axis=1)
         cv2.imshow('Processed_image', pro_image)
@@ -140,13 +156,19 @@ class Walker:
             if self.human_data_semaphore.acquire():
                 time_interval = time.time() - self.human_state.time_stamp
                 self.human_state.v = (human_pos[1] - self.human_state.y) / time_interval
-                self.human_state.omega = (human_ang - self.human_state.theta)/time_interval
+                self.human_state.omega = (human_ang - self.human_state.theta) / time_interval
                 self.human_state.y = human_pos[1]
                 self.human_state.x = human_pos[0]
                 self.human_state.theta = human_ang
                 self.human_state.time_stamp = time.time()
                 # print("DIST", self.human_state.y, "angle:", self.human_state.theta,
                 #      "\nhuman_v:", self.human_state.v, "human_omega:", self.human_state.omega)
+                self.human_data['x'].append(self.human_state.x)
+                self.human_data['y'].append(self.human_state.y)
+                self.human_data['theta'].append(self.human_state.theta)
+                self.human_data['v'].append(self.human_state.v)
+                self.human_data['omega'].append(self.human_state.omega)
+                self.human_data['time'].append(self.human_state.time_stamp - self.time_start)
                 self.human_data_semaphore.release()
 
     def controller(self):
@@ -156,9 +178,6 @@ class Walker:
             robot_vel = self.walker_state.v
             robot_angle_vel = self.walker_state.omega
             self.walker_data_semaphore.release()
-        # Position control ignore the velocity
-        desired_vel = robot_vel
-        desired_angle_vel = robot_angle_vel
 
         if self.human_data_semaphore.acquire():
             human_dist = self.human_state.y
@@ -181,33 +200,26 @@ class Walker:
         if abs(omega) > self.MAX_W:
             omega = self.MAX_W * omega / abs(omega)
 
-        print("DIST_error:", (human_dist - desired_dist), "ANGLE ERROR:", (human_angle - desired_angle),
+        print("human distance:", human_dist, "human angle:", human_angle,
               "vel_error:", relative_v, "omega_error:", relative_omega,
               "\naccel:", accel, "angle_accel", angle_accel,
               "walker_v:", robot_vel, "walker_omega:", robot_angle_vel,
-              "\ndesired_v:", v, "desired_w", omega, "Time:", time.time())
+              "\ndesired_v:", v, "desired_w", omega, "Time:", time.time() - self.time_start)
         desire_rpm_l = (2 * v - omega * self.wheel_dist) / (2 * self.wheel_radius) / math.pi / 2 * 60 * self.gear_ratio
         desire_rpm_r = (2 * v + omega * self.wheel_dist) / (2 * self.wheel_radius) / math.pi / 2 * 60 * self.gear_ratio
-        right_cmd = "V" + str(-1*int(desire_rpm_r))
+        right_cmd = "V" + str(-1 * int(desire_rpm_r))
         left_cmd = "V" + str(int(desire_rpm_l))
 
         if self.motor_semaphore.acquire():
             # print("V:", v, "omega:", omega, "l_cmd:", left_cmd, "r_cmd:", right_cmd, "time stamp:", time.time())
             self.motor_serial.send_cmd("left_motor", left_cmd)
             self.motor_serial.send_cmd("right_motor", right_cmd)
-            self.walker_state.v = v
-            self.walker_state.omega = omega
-            self.walker_state.x += self.walker_state.v * math.cos(self.walker_state.theta) * timer_interval
-            self.walker_state.y += self.walker_state.v * math.sin(self.walker_state.theta) * timer_interval
-            self.walker_state.theta += self.walker_state.omega * timer_interval
-            self.walker_state.time_stamp = time.time()
             self.motor_semaphore.release()
 
     def get_walker_information(self):
         time_stamp = -2
         if self.walker_data_semaphore.acquire():
             time_stamp = self.walker_state.time_stamp
-
             self.walker_data_semaphore.release()
         if time_stamp != -1:
             # not first time record
@@ -223,14 +235,23 @@ class Walker:
             self.pulse_l = pulse_l
             self.pulse_r = pulse_r
             if self.walker_data_semaphore.acquire():
-                self.walker_state.v = self.wheel_radius / 2 * (vr + vl)
-                self.walker_state.omega = self.wheel_radius / self.wheel_dist * (vr - vl)
-                self.walker_state.x += self.walker_state.v * math.cos(self.walker_state.theta) * timer_interval
-                self.walker_state.y += self.walker_state.v * math.sin(self.walker_state.theta) * timer_interval
-                self.walker_state.theta += self.walker_state.omega * timer_interval
-                self.walker_state.time_stamp = time.time()
-                print("walker information:",
+                print("walker information:", self.walker_state.x, self.walker_state.y, self.walker_state.theta*180/math.pi,
                       self.walker_state.v, self.walker_state.omega, self.walker_state.time_stamp - self.time_start)
+                # because the encoder will return the error message make the velocity to more than 100
+                if self.wheel_radius / 2 * (vr + vl) < 2:
+                    self.walker_state.v = self.wheel_radius / 2 * (vr + vl)
+                    self.walker_state.omega = self.wheel_radius / self.wheel_dist * (vr - vl)
+                    self.walker_state.x += self.walker_state.v * math.cos(self.walker_state.theta) * timer_interval
+                    self.walker_state.y += self.walker_state.v * math.sin(self.walker_state.theta) * timer_interval
+                    self.walker_state.theta += self.walker_state.omega * timer_interval
+                    self.walker_state.time_stamp = time.time()
+
+                    self.walker_data['x'].append(self.walker_state.x)
+                    self.walker_data['y'].append(self.walker_state.y)
+                    self.walker_data['theta'].append(self.walker_state.theta)
+                    self.walker_data['v'].append(self.walker_state.v)
+                    self.walker_data['omega'].append(self.walker_state.omega)
+                    self.walker_data['time'].append(self.walker_state.time_stamp - self.time_start)
                 self.walker_data_semaphore.release()
 
         elif time_stamp == -2:
@@ -240,11 +261,30 @@ class Walker:
             # first time record the encoder information
             if self.walker_data_semaphore.acquire():
                 self.walker_state.time_stamp = time.time()
-                self.time_start = self.walker_state.time_stamp
+                self.walker_state.v = 0
+                self.walker_state.omega = 0
+                self.walker_state.x = 0
+                self.walker_state.y = 0
+                self.walker_state.theta = math.pi/2
+                # self.time_start = self.walker_state.time_stamp
                 self.walker_data_semaphore.release()
 
+
+"""
     def motor_test(self):
-        mo_v = 0.6
+        mo_v = 0.5
+        mo_omega = 0
+        desire_l = (2 * mo_v - mo_omega * 0.6) / (2 * 0.0625) / math.pi / 2 * 60 * 14
+        desire_r = (2 * mo_v + mo_omega * 0.6) / (2 * 0.0625) / math.pi / 2 * 60 * 14
+        test_right_cmd = "V" + str(-1 * int(desire_r))
+        test_left_cmd = "V" + str(int(desire_l))
+        if self.motor_semaphore.acquire():
+            self.motor_serial.send_cmd("left_motor", test_left_cmd)
+            self.motor_serial.send_cmd("right_motor", test_right_cmd)
+            print("set command :", test_left_cmd, test_right_cmd)
+            self.motor_semaphore.release()
+        time.sleep(1)
+        mo_v = 0.1
         mo_omega = 0
         desire_l = (2 * mo_v - mo_omega * 0.6) / (2 * 0.0625) / math.pi / 2 * 60 * 14
         desire_r = (2 * mo_v + mo_omega * 0.6) / (2 * 0.0625) / math.pi / 2 * 60 * 14
@@ -256,15 +296,4 @@ class Walker:
             print("set command :", test_left_cmd, test_right_cmd)
             self.motor_semaphore.release()
         time.sleep(3)
-        mo_v = 0
-        mo_omega = 0
-        desire_l = (2 * mo_v - mo_omega * 0.6) / (2 * 0.0625) / math.pi / 2 * 60 * 14
-        desire_r = (2 * mo_v + mo_omega * 0.6) / (2 * 0.0625) / math.pi / 2 * 60 * 14
-        test_right_cmd = "V" + str(-1 * int(desire_r))
-        test_left_cmd = "V" + str(int(desire_l))
-        if self.motor_semaphore.acquire():
-            self.motor_serial.send_cmd("left_motor", test_left_cmd)
-            self.motor_serial.send_cmd("right_motor", test_right_cmd)
-            print("set command :", test_left_cmd, test_right_cmd)
-            self.motor_semaphore.release()
-        time.sleep(3)
+"""

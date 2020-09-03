@@ -72,13 +72,13 @@ class ObjectTrack:
         center[0] = self.kalman.statePost[0]
         center[1] = self.kalman.statePost[1]
         angle = self.kalman.statePost[2]
-        cnts, _ = cv2.findContours(mask.copy(), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+        contours, _ = cv2.findContours(mask.copy(), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
         # Ensure that the contours will only be one set
-        if len(cnts) > 1:
-            cnts = cnts[-1]
+        if len(contours) > 1:
+            contours = contours[-1]
         # clone = image.copy()
-        if len(cnts):
-            box = cv2.minAreaRect(cnts[0])
+        if len(contours):
+            box = cv2.minAreaRect(contours[0])
             box = np.int0(cv2.boxPoints(box))
             # print("box's value  :", box)
             # print("box's center  :", (box[1]+box[3])/2)
@@ -89,5 +89,3 @@ class ObjectTrack:
             angle = math.atan2((side[0] - center[0]), (side[1] - center[1]))
 
         return center, angle, box
-
-
