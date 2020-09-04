@@ -10,9 +10,13 @@ import pandas as pd
 
 def img2real_transform(human_pos_walker_frame, human_ang_walker_frame):
     """
-        real transform will depend on the camera placed
+        real transform will depend on the camera placed (calibration)
+        /2500*6 is calibration by rule of thumb
     """
-    return human_pos_walker_frame, human_ang_walker_frame
+    human_pos = [0, 1]
+    human_pos[0] = human_pos_walker_frame[0] / 100 / 5
+    human_pos[1] = human_pos_walker_frame[1] / 2500 * 6
+    return human_pos, float(human_ang_walker_frame)
 
 
 DIST_MAX = float(config.get('human_safety_parameter', 'DIST_MAX'))
@@ -39,9 +43,10 @@ def get_desired_pose(human_dist, human_angle):
 
 class Walker:
     def __init__(self):
+        self.start_record = 0
         self.time_start = 0
         self.stop_sys_flag = 0
-
+        self.base_y = 0
         # init csv file to write
         self.walker_data = {'time': [],
                             'x': [], 'y': [], 'theta': [],
@@ -89,13 +94,14 @@ class Walker:
 
     def run(self):
         self.cam_timer.start()
+        time.sleep(2)
         self.time_start = time.time()
+        # make the motor be control without controller
         self.motor_serial.send_cmd("right_motor", "DI")
         self.motor_serial.send_cmd("left_motor", "DI")
         self.encoder_timer.start()
-        time.sleep(5)
+        time.sleep(2)
         # wait several secs to let the camera track the feet
-
         # self.command_timer.start()
 
         while True:
@@ -106,8 +112,10 @@ class Walker:
                 break
         walker_df = pd.DataFrame(self.walker_data)
         human_df = pd.DataFrame(self.human_data)
-        walker_df.to_csv("./Data_Result/walker_data.csv", sep='\t')
-        human_df.to_csv("./Data_Result/human_data.csv", sep='\t')
+        walker_df.to_csv("./Data_Result/walker_data_" + time.strftime("%b_%d_%H_%M_%S", time.localtime()) + ".csv",
+                         sep='\t')
+        human_df.to_csv("./Data_Result/human_data_walker_frame_" +
+                        time.strftime("%b_%d_%H_%M_%S", time.localtime()) + ".csv", sep='\t')
         print("Record the data's csv file!!")
 
     def image_process(self):
@@ -155,20 +163,30 @@ class Walker:
         else:
             if self.human_data_semaphore.acquire():
                 time_interval = time.time() - self.human_state.time_stamp
-                self.human_state.v = (human_pos[1] - self.human_state.y) / time_interval
-                self.human_state.omega = (human_ang - self.human_state.theta) / time_interval
-                self.human_state.y = human_pos[1]
-                self.human_state.x = human_pos[0]
-                self.human_state.theta = human_ang
+                v = (human_pos[1] - self.human_state.y) / time_interval
+                omega = (human_ang - self.human_state.theta) / time_interval
+                y = human_pos[1]
+                x = human_pos[0]
+                theta = human_ang
+                self.human_state.v = v
+                self.human_state.omega = omega
+                self.human_state.y = y
+                self.human_state.x = x
+                self.human_state.theta = theta
                 self.human_state.time_stamp = time.time()
-                # print("DIST", self.human_state.y, "angle:", self.human_state.theta,
-                #      "\nhuman_v:", self.human_state.v, "human_omega:", self.human_state.omega)
-                self.human_data['x'].append(self.human_state.x)
-                self.human_data['y'].append(self.human_state.y)
-                self.human_data['theta'].append(self.human_state.theta)
-                self.human_data['v'].append(self.human_state.v)
-                self.human_data['omega'].append(self.human_state.omega)
-                self.human_data['time'].append(self.human_state.time_stamp - self.time_start)
+                print("DIST", self.human_state.y, "angle:", self.human_state.theta,
+                      "\nhuman_v:", self.human_state.v, "human_omega:", self.human_state.omega)
+                if abs(v) < 0.01 and self.start_record == 0:
+                    self.base_y = self.human_state.y
+                    self.start_record = 1
+
+                if self.start_record == 1:
+                    self.human_data['x'].append(0)
+                    self.human_data['y'].append(format(self.human_state.y - self.base_y, ".2f"))
+                    self.human_data['theta'].append(format(self.human_state.theta, ".3f"))
+                    self.human_data['v'].append(format(self.human_state.v, ".2f"))
+                    self.human_data['omega'].append(self.human_state.omega)
+                    self.human_data['time'].append(format(self.human_state.time_stamp - self.time_start, ".3f"))
                 self.human_data_semaphore.release()
 
     def controller(self):
@@ -235,23 +253,29 @@ class Walker:
             self.pulse_l = pulse_l
             self.pulse_r = pulse_r
             if self.walker_data_semaphore.acquire():
-                print("walker information:", self.walker_state.x, self.walker_state.y, self.walker_state.theta*180/math.pi,
-                      self.walker_state.v, self.walker_state.omega, self.walker_state.time_stamp - self.time_start)
-                # because the encoder will return the error message make the velocity to more than 100
+                # print("walker information:", self.walker_state.x, self.walker_state.y,
+                # self.walker_state.theta*180/math.pi, self.walker_state.v, self.walker_state.omega,
+                # self.walker_state.time_stamp - self.time_start) because the encoder will return the error message
+                # make the velocity to more than 100
                 if self.wheel_radius / 2 * (vr + vl) < 2:
-                    self.walker_state.v = self.wheel_radius / 2 * (vr + vl)
-                    self.walker_state.omega = self.wheel_radius / self.wheel_dist * (vr - vl)
-                    self.walker_state.x += self.walker_state.v * math.cos(self.walker_state.theta) * timer_interval
-                    self.walker_state.y += self.walker_state.v * math.sin(self.walker_state.theta) * timer_interval
-                    self.walker_state.theta += self.walker_state.omega * timer_interval
+                    v = self.wheel_radius / 2 * (vr + vl)
+                    omega = self.wheel_radius / self.wheel_dist * (vr - vl)
+                    x = self.walker_state.x + self.walker_state.v * math.cos(self.walker_state.theta) * timer_interval
+                    y = self.walker_state.y + self.walker_state.v * math.sin(self.walker_state.theta) * timer_interval
+                    theta = self.walker_state.theta + self.walker_state.omega * timer_interval
+                    self.walker_state.v = v
+                    self.walker_state.omega = omega
+                    self.walker_state.x = x
+                    self.walker_state.y = y
+                    self.walker_state.theta = theta
                     self.walker_state.time_stamp = time.time()
 
-                    self.walker_data['x'].append(self.walker_state.x)
-                    self.walker_data['y'].append(self.walker_state.y)
-                    self.walker_data['theta'].append(self.walker_state.theta)
-                    self.walker_data['v'].append(self.walker_state.v)
-                    self.walker_data['omega'].append(self.walker_state.omega)
-                    self.walker_data['time'].append(self.walker_state.time_stamp - self.time_start)
+                    self.walker_data['x'].append(format(x, ".3f"))
+                    self.walker_data['y'].append(format(y, ".3f"))
+                    self.walker_data['theta'].append(format(theta, ".4f"))
+                    self.walker_data['v'].append(format(v, ".4f"))
+                    self.walker_data['omega'].append(format(omega, ".4f"))
+                    self.walker_data['time'].append(format(self.walker_state.time_stamp - self.time_start, ".3f"))
                 self.walker_data_semaphore.release()
 
         elif time_stamp == -2:
@@ -265,7 +289,7 @@ class Walker:
                 self.walker_state.omega = 0
                 self.walker_state.x = 0
                 self.walker_state.y = 0
-                self.walker_state.theta = math.pi/2
+                self.walker_state.theta = math.pi / 2
                 # self.time_start = self.walker_state.time_stamp
                 self.walker_data_semaphore.release()
 
