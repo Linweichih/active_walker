@@ -61,6 +61,7 @@ class ObjectTrack:
         if self.position[0] > 0:
             self.kalman.correct(current_measurement)
         pose = self.kalman.predict()
+        self.position = np.zeros(2)
         self.position[0] = pose[0]
         self.position[1] = pose[1]
         self.angle = pose[2]

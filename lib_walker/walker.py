@@ -13,7 +13,7 @@ def img2real_transform(human_pos_walker_frame, human_ang_walker_frame):
         real transform will depend on the camera placed (calibration)
         /2500*6 is calibration by rule of thumb
     """
-    human_pos = [0, 1]
+    human_pos = np.zeros(2)
     human_pos[0] = human_pos_walker_frame[0] / 2500 * 6
     human_pos[1] = human_pos_walker_frame[1] / 2500 * 6
     return human_pos, float(human_ang_walker_frame)
@@ -163,11 +163,12 @@ class Walker:
             sys.exit()
         else:
             if self.human_data_semaphore.acquire():
+                human_pos.astype(float)
                 time_interval = time.time() - self.human_state.time_stamp
-                v = (human_pos[1].__float__() - self.human_state.y) / time_interval
+                v = (human_pos[1] - self.human_state.y) / time_interval
                 omega = (human_ang - self.human_state.theta) / time_interval
-                y = human_pos[1].__float__()
-                x = human_pos[0].__float__()
+                y = human_pos[1]
+                x = human_pos[0]
                 theta = human_ang
                 self.human_state.v = v
                 self.human_state.omega = omega
@@ -186,8 +187,8 @@ class Walker:
                     try:
                         self.human_data['y'].append((y-self.base_y).__format__(".2f"))
                     except TypeError:
-                        print(y.__class__)
-                        self.human_data['y'].append(y)
+                        print("detect TypeError")
+                        self.human_data['y'].append(y-self.base_y)
                     self.human_data['theta'].append(theta.__format__(".2f"))
                     try:
                         self.human_data['v'].append(v.__format__(".3f"))
