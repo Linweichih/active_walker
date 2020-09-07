@@ -26,9 +26,9 @@ class MotorSerial:
         self.send_cmd("left_motor", "EN")
         self.send_cmd("right_motor", "EN")
         # set acceleration and deceleration
-        self.send_cmd("left_motor", "AC10")     # almost 0.3 m/s^2
+        self.send_cmd("left_motor", "AC5")     # almost 0.3 m/s^2
         self.send_cmd("left_motor", "DEC10")    # almost -0.3 m/s^2
-        self.send_cmd("right_motor", "AC10")
+        self.send_cmd("right_motor", "AC5")
         self.send_cmd("right_motor", "DEC10")
         # try to send the cmd to motor
         for i in range(5):
@@ -50,7 +50,7 @@ class MotorSerial:
             try:
                 ret_str = self.serial.readline()
                 if 'OK'.encode() not in ret_str:
-                    print('Command is not set to the driver')
+                    print('Command is not set to the driver and return OK ')
             except serial.SerialException:
                 print("Can not send motor message")
 
@@ -96,7 +96,7 @@ if __name__ == '__main__':
     pre_pulse_r = motor.get_motor_pos("right_motor")
     motor.send_cmd("left_motor", test_left_cmd)
     motor.send_cmd("right_motor", test_right_cmd)
-    time.sleep(1)
+    time.sleep(3)
     #pulse_l = motor.get_motor_pos("left_motor")
     #pulse_r = motor.get_motor_pos("right_motor")
     #print(pulse_r-pre_pulse_r, pulse_l-pre_pulse_l)

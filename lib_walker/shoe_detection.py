@@ -74,7 +74,7 @@ class ShoeDetection:
         left_mask = outputs[:, :, 1]
         right_pos, right_angle, right_bbox = self.right_shoe_track.update(right_mask)
         left_pos, left_angle, left_bbox = self.left_shoe_track.update(left_mask)
-        # print("right_foot_angle:", right_angle, "left foot angle:", left_angle)
+        print("right_foot_angle:", right_angle * 180 / math.pi, "left foot angle:", left_angle * 180 / math.pi)
         if left_angle > 1.7 and right_angle > 1.7:
             no_foot_flag = True
         if not no_foot_flag:

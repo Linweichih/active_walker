@@ -14,7 +14,7 @@ def img2real_transform(human_pos_walker_frame, human_ang_walker_frame):
         /2500*6 is calibration by rule of thumb
     """
     human_pos = [0, 1]
-    human_pos[0] = human_pos_walker_frame[0] / 100 / 5
+    human_pos[0] = human_pos_walker_frame[0] / 2500 * 6
     human_pos[1] = human_pos_walker_frame[1] / 2500 * 6
     return human_pos, float(human_ang_walker_frame)
 
@@ -46,7 +46,7 @@ class Walker:
         self.start_record = 0
         self.time_start = 0
         self.stop_sys_flag = 0
-        self.base_y = 0
+        self.base_y = 383
         # init csv file to write
         self.walker_data = {'time': [],
                             'x': [], 'y': [], 'theta': [],
@@ -85,7 +85,7 @@ class Walker:
         self.wheel_dist = float(config.get('motor_config', 'wheel_distance'))
         self.cam_timer = timer(0.03, self.image_process)
         self.cam_timer.daemon = True
-        self.encoder_timer = timer(0.05, self.get_walker_information)
+        self.encoder_timer = timer(0.06, self.get_walker_information)
         self.cam_timer.daemon = True
         self.command_timer = timer(0.09, self.controller)
         self.command_timer.daemon = True
@@ -96,11 +96,12 @@ class Walker:
         self.cam_timer.start()
         time.sleep(2)
         self.time_start = time.time()
-        # make the motor be control without controller
-        self.motor_serial.send_cmd("right_motor", "DI")
-        self.motor_serial.send_cmd("left_motor", "DI")
+        # make the motor be push with human hand
+        #self.motor_serial.send_cmd("right_motor", "DI")
+        #self.motor_serial.send_cmd("left_motor", "DI")
+        time.sleep(3)
         self.encoder_timer.start()
-        time.sleep(2)
+        time.sleep(1)
         # wait several secs to let the camera track the feet
         # self.command_timer.start()
 
@@ -116,7 +117,7 @@ class Walker:
                          sep='\t')
         human_df.to_csv("./Data_Result/human_data_walker_frame_" +
                         time.strftime("%b_%d_%H_%M_%S", time.localtime()) + ".csv", sep='\t')
-        print("Record the data's csv file!!")
+        print("\nRecord the data's csv file!!")
 
     def image_process(self):
         # cv2.namedWindow('Read_image', flags=cv2.WINDOW_NORMAL | cv2.WINDOW_KEEPRATIO | cv2.WINDOW_GUI_EXPANDED)
@@ -163,10 +164,10 @@ class Walker:
         else:
             if self.human_data_semaphore.acquire():
                 time_interval = time.time() - self.human_state.time_stamp
-                v = (human_pos[1] - self.human_state.y) / time_interval
+                v = (human_pos[1].__float__() - self.human_state.y) / time_interval
                 omega = (human_ang - self.human_state.theta) / time_interval
-                y = human_pos[1]
-                x = human_pos[0]
+                y = human_pos[1].__float__()
+                x = human_pos[0].__float__()
                 theta = human_ang
                 self.human_state.v = v
                 self.human_state.omega = omega
@@ -174,18 +175,26 @@ class Walker:
                 self.human_state.x = x
                 self.human_state.theta = theta
                 self.human_state.time_stamp = time.time()
-                print("DIST", self.human_state.y, "angle:", self.human_state.theta,
-                      "\nhuman_v:", self.human_state.v, "human_omega:", self.human_state.omega)
+                # print("DIST", self.human_state.y, "angle:", self.human_state.theta,
+                #      "\nhuman_v:", self.human_state.v, "human_omega:", self.human_state.omega)
                 if abs(v) < 0.01 and self.start_record == 0:
-                    self.base_y = self.human_state.y
+                    # self.base_y = self.human_state.y
                     self.start_record = 1
 
                 if self.start_record == 1:
                     self.human_data['x'].append(0)
-                    self.human_data['y'].append(format(self.human_state.y - self.base_y, ".2f"))
-                    self.human_data['theta'].append(format(self.human_state.theta, ".3f"))
-                    self.human_data['v'].append(format(self.human_state.v, ".2f"))
-                    self.human_data['omega'].append(self.human_state.omega)
+                    try:
+                        self.human_data['y'].append((y-self.base_y).__format__(".2f"))
+                    except TypeError:
+                        print(y.__class__)
+                        self.human_data['y'].append(y)
+                    self.human_data['theta'].append(theta.__format__(".2f"))
+                    try:
+                        self.human_data['v'].append(v.__format__(".3f"))
+                    except TypeError:
+                        print(v)
+                        self.human_data['v'].append(v)
+                    self.human_data['omega'].append(omega.__format__(".3f"))
                     self.human_data['time'].append(format(self.human_state.time_stamp - self.time_start, ".3f"))
                 self.human_data_semaphore.release()
 
@@ -205,6 +214,10 @@ class Walker:
             self.human_data_semaphore.release()
 
         desired_dist, desired_angle = get_desired_pose(human_dist, human_angle)
+        """
+        human_dist = desired_dist
+        human_angle = desired_angle
+        """
         accel = -self.K_1 * relative_v - self.K_2 * (human_dist - desired_dist)
         angle_accel = -self.K_3 * relative_omega - self.K_4 * (human_angle - desired_angle)
         if abs(accel) > self.MAX_AC:
@@ -218,7 +231,7 @@ class Walker:
         if abs(omega) > self.MAX_W:
             omega = self.MAX_W * omega / abs(omega)
 
-        print("human distance:", human_dist, "human angle:", human_angle,
+        print("distance error :", human_dist - desired_dist, "angle error :", human_angle - desired_angle,
               "vel_error:", relative_v, "omega_error:", relative_omega,
               "\naccel:", accel, "angle_accel", angle_accel,
               "walker_v:", robot_vel, "walker_omega:", robot_angle_vel,
