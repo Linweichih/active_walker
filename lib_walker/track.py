@@ -41,7 +41,7 @@ class ObjectTrack:
         self.kalman.measurementNoiseCov = np.array([[1, 0, 0], [0, 1, 0], [0, 0, 1]], np.float32) * 0.01
         # filter the image of feet in the rec that the feet will appear
         self.filter_kernel = np.zeros(INPUT_IMG_SIZE, np.uint8)
-        # self.filter_kernel[0:384, 100:400] = 255
+        self.filter_kernel[0:384, 100:400] = 255
         # set the open/close operation kernel
         self.open_kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (30, 30))
         self.close_kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (20, 20))
@@ -49,7 +49,7 @@ class ObjectTrack:
     def update(self, mask):
 
         # pre-process the mask
-        # mask = cv2.bitwise_and(mask, self.filter_kernel)
+        mask = cv2.bitwise_and(mask, self.filter_kernel)
         mask = cv2.morphologyEx(mask, cv2.MORPH_OPEN, self.open_kernel)
         mask = cv2.morphologyEx(mask, cv2.MORPH_CLOSE, self.close_kernel)
         # get the obb of the mask

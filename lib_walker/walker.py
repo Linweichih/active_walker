@@ -257,11 +257,13 @@ class Walker:
         if time_stamp != -1:
             # not first time record
             if self.motor_semaphore.acquire():
-                # print("get encoder information!!")
+                # print("get left_motor encoder information!!")
                 pulse_l = self.motor_serial.get_motor_pos("left_motor")
+                self.motor_semaphore.release()
+            if self.motor_semaphore.acquire():
+                # print("get right_motor encoder information!!")
                 pulse_r = self.motor_serial.get_motor_pos("right_motor")
                 self.motor_semaphore.release()
-
             timer_interval = time.time() - time_stamp
             vl = (pulse_l - self.pulse_l) / 3000 / self.gear_ratio * 2 * math.pi / timer_interval
             vr = -(pulse_r - self.pulse_r) / 3000 / self.gear_ratio * 2 * math.pi / timer_interval  # notice the "minus"

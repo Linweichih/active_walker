@@ -99,6 +99,7 @@ class ShoeDetection:
             if left_bbox.all() != 0:
                 processed_image = cv2.drawContours(processed_image, [left_bbox], -1, (0, 120, 120), 3)
             # print("Use {} sec to process a image".format(time.time() - t_s))
+            # processed_image = cv2.line(processed_image, (100, 0), (400, 318), (0, 0, 255),5)
             return processed_image, outputs, self.human_position, self.human_angle
         else:
             return resized_image
