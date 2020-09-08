@@ -69,10 +69,12 @@ class MotorSerial:
                 print("Can not send motor message")
             try:
                 ret_str = self.serial.readline()
-                return int(ret_str)
+                try:
+                    return int(ret_str)
+                except ValueError:
+                    print(ret_str, 'ValueError')
             except serial.SerialException:
                 print("Can not send motor message")
-
         else:
             print("The serial is not open")
 
@@ -96,7 +98,7 @@ if __name__ == '__main__':
     pre_pulse_r = motor.get_motor_pos("right_motor")
     motor.send_cmd("left_motor", test_left_cmd)
     motor.send_cmd("right_motor", test_right_cmd)
-    time.sleep(3)
+    time.sleep(2)
     #pulse_l = motor.get_motor_pos("left_motor")
     #pulse_r = motor.get_motor_pos("right_motor")
     #print(pulse_r-pre_pulse_r, pulse_l-pre_pulse_l)

@@ -97,13 +97,13 @@ class Walker:
         time.sleep(2)
         self.time_start = time.time()
         # make the motor be push with human hand
-        #self.motor_serial.send_cmd("right_motor", "DI")
-        #self.motor_serial.send_cmd("left_motor", "DI")
+        # self.motor_serial.send_cmd("right_motor", "DI")
+        # self.motor_serial.send_cmd("left_motor", "DI")
         time.sleep(3)
         self.encoder_timer.start()
         time.sleep(1)
         # wait several secs to let the camera track the feet
-        # self.command_timer.start()
+        self.command_timer.start()
 
         while True:
             time.sleep(1)
@@ -185,18 +185,18 @@ class Walker:
                 if self.start_record == 1:
                     self.human_data['x'].append(0)
                     try:
-                        self.human_data['y'].append((y-self.base_y).__format__(".2f"))
+                        self.human_data['y'].append((y-self.base_y).__format__(".3f"))
                     except TypeError:
                         print("detect TypeError")
                         self.human_data['y'].append(y-self.base_y)
-                    self.human_data['theta'].append(theta.__format__(".2f"))
+                    self.human_data['theta'].append(theta.__format__(".4f"))
                     try:
                         self.human_data['v'].append(v.__format__(".3f"))
                     except TypeError:
                         print(v)
                         self.human_data['v'].append(v)
                     self.human_data['omega'].append(omega.__format__(".3f"))
-                    self.human_data['time'].append(format(self.human_state.time_stamp - self.time_start, ".3f"))
+                    self.human_data['time'].append(format(self.human_state.time_stamp - self.time_start, ".2f"))
                 self.human_data_semaphore.release()
 
     def controller(self):
@@ -231,12 +231,13 @@ class Walker:
             v = self.MAX_V * v / abs(v)
         if abs(omega) > self.MAX_W:
             omega = self.MAX_W * omega / abs(omega)
-
+        """
         print("distance error :", human_dist - desired_dist, "angle error :", human_angle - desired_angle,
               "vel_error:", relative_v, "omega_error:", relative_omega,
               "\naccel:", accel, "angle_accel", angle_accel,
               "walker_v:", robot_vel, "walker_omega:", robot_angle_vel,
               "\ndesired_v:", v, "desired_w", omega, "Time:", time.time() - self.time_start)
+        """
         desire_rpm_l = (2 * v - omega * self.wheel_dist) / (2 * self.wheel_radius) / math.pi / 2 * 60 * self.gear_ratio
         desire_rpm_r = (2 * v + omega * self.wheel_dist) / (2 * self.wheel_radius) / math.pi / 2 * 60 * self.gear_ratio
         right_cmd = "V" + str(-1 * int(desire_rpm_r))
@@ -287,9 +288,9 @@ class Walker:
                     self.walker_data['x'].append(format(x, ".3f"))
                     self.walker_data['y'].append(format(y, ".3f"))
                     self.walker_data['theta'].append(format(theta, ".4f"))
-                    self.walker_data['v'].append(format(v, ".4f"))
-                    self.walker_data['omega'].append(format(omega, ".4f"))
-                    self.walker_data['time'].append(format(self.walker_state.time_stamp - self.time_start, ".3f"))
+                    self.walker_data['v'].append(format(v, ".3f"))
+                    self.walker_data['omega'].append(format(omega, ".3f"))
+                    self.walker_data['time'].append(format(self.walker_state.time_stamp - self.time_start, ".2f"))
                 self.walker_data_semaphore.release()
 
         elif time_stamp == -2:
