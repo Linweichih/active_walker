@@ -3,6 +3,7 @@ from lib_walker.sensor import *
 from lib_walker.motor import *
 from lib_walker.timer import *
 from lib_walker.shoe_detection import *
+from lib_walker.plot import *
 from threading import Semaphore
 import math
 import pandas as pd
@@ -113,10 +114,11 @@ class Walker:
                 break
         walker_df = pd.DataFrame(self.walker_data)
         human_df = pd.DataFrame(self.human_data)
-        walker_df.to_csv("./Data_Result/walker_data_" + time.strftime("%b_%d_%H_%M_%S", time.localtime()) + ".csv",
+        os.mkdir("./Data_Result/" + time.strftime("%b_%d_%H_%M_%S", time.localtime()))
+        walker_df.to_csv("./Data_Result/" + time.strftime("%b_%d_%H_%M_%S", time.localtime()) + "/walker_data.csv",
                          sep='\t')
-        human_df.to_csv("./Data_Result/human_data_walker_frame_" +
-                        time.strftime("%b_%d_%H_%M_%S", time.localtime()) + ".csv", sep='\t')
+        human_df.to_csv("./Data_Result/" + time.strftime("%b_%d_%H_%M_%S", time.localtime()) + "/human_data.csv",
+                        sep='\t')
         print("\nRecord the data's csv file!!")
 
     def image_process(self):

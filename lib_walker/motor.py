@@ -73,6 +73,7 @@ class MotorSerial:
                     return int(ret_str)
                 except ValueError:
                     print(ret_str, 'ValueError')
+                    self.close()
             except serial.SerialException:
                 print("Can not send motor message")
         else:
