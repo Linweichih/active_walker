@@ -7,6 +7,12 @@ class State:
         self.v = 0.0
         self.omega = 0.0
         self.time_stamp = -1
+        self.x_force = 0.0
+        self.y_force = 0.0
+        self.z_force = 0.0
+        self.x_torque = 0.0
+        self.y_torque = 0.0
+        self.z_torque = 0.0
     """
     useless
     def update(self, x, y, theta):

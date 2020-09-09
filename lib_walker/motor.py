@@ -20,7 +20,7 @@ class MotorSerial:
         try:
             self.serial = serial.Serial(self.com_port, self.baud_rate, timeout=self.time_out)
         except serial.SerialException:
-            print("Connect to {} serial error!!", self.com_port)
+            print("Motor Connect to {} serial error!!", self.com_port)
             sys.exit()
         # enable the driver of the motor
         self.send_cmd("left_motor", "EN")

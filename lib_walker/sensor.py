@@ -34,7 +34,15 @@ class ForceSensor:
         self.time_out = int(config.get("force_sensor", 'Read_timeout'))
         self.force_sensor = serial.Serial(self.com_port, self.baud_rate, timeout=self.time_out)
 
+        try:
+            self.serial = serial.Serial(self.com_port, self.baud_rate, timeout=self.time_out)
+        except serial.SerialException:
+            print("ForceSensor Connect to {} serial error!!", self.com_port)
+            sys.exit()
+        # calibration part (send 'p' command)
+
     def read_force_data(self):
+        # get force part (send 'R' command)
         pass
 
 
