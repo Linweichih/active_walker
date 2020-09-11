@@ -98,8 +98,8 @@ class Walker:
         time.sleep(2)
         self.time_start = time.time()
         # make the motor be push with human hand
-        # self.motor_serial.send_cmd("right_motor", "DI")
-        # self.motor_serial.send_cmd("left_motor", "DI")
+        #self.motor_serial.send_cmd("right_motor", "DI")
+        #self.motor_serial.send_cmd("left_motor", "DI")
         time.sleep(3)
         self.encoder_timer.start()
         time.sleep(1)
@@ -151,6 +151,10 @@ class Walker:
         human_pos, human_ang = img2real_transform(human_pos_walker_frame, human_ang_walker_frame)
         human_pos[1] = 384 - human_pos[1]
         # human_ang = -1 * human_ang
+        if self.walker_data_semaphore.acquire():
+            robot_vel = self.walker_state.v
+            robot_angle_vel = self.walker_state.omega
+            self.walker_data_semaphore.release()
         time_stamp = -2
         if self.human_data_semaphore.acquire():
             time_stamp = self.human_state.time_stamp
@@ -178,7 +182,7 @@ class Walker:
                 self.human_state.x = x
                 self.human_state.theta = theta
                 self.human_state.time_stamp = time.time()
-                # print("DIST", self.human_state.y, "angle:", self.human_state.theta,
+                # print("robot_vel", robot_vel, "robot_angle_vel:", robot_angle_vel,
                 #      "\nhuman_v:", self.human_state.v, "human_omega:", self.human_state.omega)
                 if abs(v) < 0.01 and self.start_record == 0:
                     # self.base_y = self.human_state.y
@@ -193,12 +197,14 @@ class Walker:
                         self.human_data['y'].append(y-self.base_y)
                     self.human_data['theta'].append(theta.__format__(".4f"))
                     try:
-                        self.human_data['v'].append(v.__format__(".3f"))
+                        self.human_data['v'].append((robot_vel - v).__format__(".2f"))
                     except TypeError:
                         print(v)
                         self.human_data['v'].append(v)
-                    self.human_data['omega'].append(omega.__format__(".3f"))
+                    self.human_data['omega'].append((robot_angle_vel - omega).__format__(".3f"))
                     self.human_data['time'].append(format(self.human_state.time_stamp - self.time_start, ".2f"))
+                    #print("human_v:", (robot_vel - v).__format__(".2f"),
+                    #      "human_dist:", (y-self.base_y).__format__(".3f"))
                 self.human_data_semaphore.release()
 
     def controller(self):
@@ -246,8 +252,9 @@ class Walker:
         left_cmd = "V" + str(int(desire_rpm_l))
 
         if self.motor_semaphore.acquire():
-            # print("V:", v, "omega:", omega, "l_cmd:", left_cmd, "r_cmd:", right_cmd, "time stamp:", time.time())
             self.motor_serial.send_cmd("left_motor", left_cmd)
+            self.motor_semaphore.release()
+        if self.motor_semaphore.acquire():
             self.motor_serial.send_cmd("right_motor", right_cmd)
             self.motor_semaphore.release()
 
@@ -267,6 +274,10 @@ class Walker:
                 pulse_r = self.motor_serial.get_motor_pos("right_motor")
                 self.motor_semaphore.release()
             timer_interval = time.time() - time_stamp
+            if pulse_l == 'NAN':
+                pulse_l = self.pulse_l
+            if pulse_r == 'NAN':
+                pulse_r = self.pulse_r
             vl = (pulse_l - self.pulse_l) / 3000 / self.gear_ratio * 2 * math.pi / timer_interval
             vr = -(pulse_r - self.pulse_r) / 3000 / self.gear_ratio * 2 * math.pi / timer_interval  # notice the "minus"
             self.pulse_l = pulse_l
@@ -295,6 +306,7 @@ class Walker:
                     self.walker_data['v'].append(format(v, ".3f"))
                     self.walker_data['omega'].append(format(omega, ".3f"))
                     self.walker_data['time'].append(format(self.walker_state.time_stamp - self.time_start, ".2f"))
+                    print('walker_x:', format(x, ".3f"), 'walker_y:', format(y, ".3f"))
                 self.walker_data_semaphore.release()
 
         elif time_stamp == -2:

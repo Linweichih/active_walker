@@ -31,11 +31,11 @@ if __name__ == "__main__":
             else:
                 print("NOT the human or walker file")
             # print(Path(total_data_folder).joinpath(total_data), "is a file!!")
-    walker_df = pd.DataFrame(old_walker_file)
+    walker_df = pd.DataFrame(walker_file)
     print(walker_df)
-    human_df = pd.DataFrame(old_human_file)
-    human_df.plot(kind='line', x='time', y='y', color='red', ax=ax)
-    # walker_df.plot(kind='line', x='x', y='y', color='blue', ax=ax)
+    human_df = pd.DataFrame(human_file)
+    human_df.plot(kind='line', x='time', y='v', color='red', ax=ax)
+    walker_df.plot(kind='line', x='time', y='v', color='blue', ax=ax)
     plt.show()
     """
     walker_file = pd.read_csv('C:/Users/kv4771/weichih/active_walker/Data_Result/walker_data_Sep_08_20_29_40.csv',
