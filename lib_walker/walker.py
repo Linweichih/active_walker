@@ -210,8 +210,14 @@ class Walker:
                         print(v)
                         self.human_data['v'].append(v)
                     self.human_data['omega'].append((robot_angle_vel - omega).__format__(".3f"))
+                    self.human_data['x_force'].append(self.human_state.x_force.__format__(".4f"))
+                    self.human_data['y_force'].append(self.human_state.y_force.__format__(".4f"))
+                    self.human_data['z_force'].append(self.human_state.z_force.__format__(".4f"))
+                    self.human_data['x_torque'].append(self.human_state.x_torque.__format__(".4f"))
+                    self.human_data['y_torque'].append(self.human_state.y_torque.__format__(".4f"))
+                    self.human_data['z_torque'].append(self.human_state.z_torque.__format__(".4f"))
                     self.human_data['time'].append(format(self.human_state.time_stamp - self.time_start, ".2f"))
-                    #print("human_v:", (robot_vel - v).__format__(".2f"),
+                    # print("human_v:", (robot_vel - v).__format__(".2f"),
                     #      "human_dist:", (y-self.base_y).__format__(".3f"))
                 self.human_data_semaphore.release()
 
