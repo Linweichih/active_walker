@@ -65,6 +65,7 @@ class Walker:
         self.K_3 = float(config.get('controller_config', 'K_3'))
         self.K_4 = float(config.get('controller_config', 'K_4'))
 
+        self.force_sensor = ForceSensor()
         self.cam = UsbCam()
         self.human_state = State()
         self.walker_state = State()
@@ -84,7 +85,7 @@ class Walker:
         self.gear_ratio = float(config.get('motor_config', 'gear_ratio'))
         self.wheel_radius = float(config.get('motor_config', 'wheel_radius'))
         self.wheel_dist = float(config.get('motor_config', 'wheel_distance'))
-        self.cam_timer = timer(0.03, self.image_process)
+        self.cam_timer = timer(0.03, self.get_human_information)
         self.cam_timer.daemon = True
         self.encoder_timer = timer(0.06, self.get_walker_information)
         self.cam_timer.daemon = True
@@ -116,12 +117,12 @@ class Walker:
         human_df = pd.DataFrame(self.human_data)
         os.mkdir("./Data_Result/" + time.strftime("%b_%d_%H_%M_%S", time.localtime()))
         walker_df.to_csv("./Data_Result/" + time.strftime("%b_%d_%H_%M_%S", time.localtime()) + "/walker_data.csv",
-                         sep='\t')
+                         sep=',')
         human_df.to_csv("./Data_Result/" + time.strftime("%b_%d_%H_%M_%S", time.localtime()) + "/human_data.csv",
-                        sep='\t')
+                        sep=',')
         print("\nRecord the data's csv file!!")
 
-    def image_process(self):
+    def get_human_information(self):
         # cv2.namedWindow('Read_image', flags=cv2.WINDOW_NORMAL | cv2.WINDOW_KEEPRATIO | cv2.WINDOW_GUI_EXPANDED)
         cv2.namedWindow('Processed_image', flags=cv2.WINDOW_NORMAL | cv2.WINDOW_KEEPRATIO | cv2.WINDOW_GUI_EXPANDED)
         cv2.namedWindow('detection_mask', flags=cv2.WINDOW_NORMAL | cv2.WINDOW_KEEPRATIO | cv2.WINDOW_GUI_EXPANDED)
@@ -151,6 +152,7 @@ class Walker:
         human_pos, human_ang = img2real_transform(human_pos_walker_frame, human_ang_walker_frame)
         human_pos[1] = 384 - human_pos[1]
         # human_ang = -1 * human_ang
+        force_data_list = self.force_sensor.read_force_data()
         if self.walker_data_semaphore.acquire():
             robot_vel = self.walker_state.v
             robot_angle_vel = self.walker_state.omega
@@ -181,6 +183,12 @@ class Walker:
                 self.human_state.y = y
                 self.human_state.x = x
                 self.human_state.theta = theta
+                self.human_state.x_force = force_data_list[0]
+                self.human_state.y_force = force_data_list[1]
+                self.human_state.z_force = force_data_list[2]
+                self.human_state.x_torque = force_data_list[3]
+                self.human_state.y_torque = force_data_list[4]
+                self.human_state.z_torque = force_data_list[5]
                 self.human_state.time_stamp = time.time()
                 # print("robot_vel", robot_vel, "robot_angle_vel:", robot_angle_vel,
                 #      "\nhuman_v:", self.human_state.v, "human_omega:", self.human_state.omega)

@@ -18,16 +18,16 @@ if __name__ == "__main__":
             data_list = os.listdir(data_folder)
             for data in data_list:
                 if 'human' in data:
-                    human_file = pd.read_csv(Path(data_folder).joinpath(data), sep='\t')
+                    human_file = pd.read_csv(Path(data_folder).joinpath(data), sep=',')
                 elif 'walker' in data:
-                    walker_file = pd.read_csv(Path(data_folder).joinpath(data), sep='\t')
+                    walker_file = pd.read_csv(Path(data_folder).joinpath(data), sep=',')
                 else:
                     print("NOT the human or walker file")
         else:
             if 'human' in total_data:
-                old_human_file = pd.read_csv(Path(total_data_folder).joinpath(total_data), sep='\t')
+                old_human_file = pd.read_csv(Path(total_data_folder).joinpath(total_data), sep=',')
             elif 'walker' in total_data:
-                old_walker_file = pd.read_csv(Path(total_data_folder).joinpath(total_data), sep='\t')
+                old_walker_file = pd.read_csv(Path(total_data_folder).joinpath(total_data), sep=',')
             else:
                 print("NOT the human or walker file")
             # print(Path(total_data_folder).joinpath(total_data), "is a file!!")
