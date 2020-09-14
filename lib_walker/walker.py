@@ -54,7 +54,9 @@ class Walker:
                             'v': [], 'omega': []}
         self.human_data = {'time': [],
                            'x': [], 'y': [], 'theta': [],
-                           'v': [], 'omega': []}
+                           'v': [], 'omega': [],
+                           'x_force': [], 'y_force': [], 'z_force': [],
+                           'x_torque': [], 'y_torque': [], 'z_torque': []}
 
         self.MAX_W = float(config.get('motor_config', 'max_omega'))
         self.MAX_V = float(config.get('motor_config', 'max_velocity'))
@@ -99,13 +101,13 @@ class Walker:
         time.sleep(2)
         self.time_start = time.time()
         # make the motor be push with human hand
-        #self.motor_serial.send_cmd("right_motor", "DI")
-        #self.motor_serial.send_cmd("left_motor", "DI")
+        self.motor_serial.send_cmd("right_motor", "DI")
+        self.motor_serial.send_cmd("left_motor", "DI")
         time.sleep(3)
         self.encoder_timer.start()
         time.sleep(1)
         # wait several secs to let the camera track the feet
-        self.command_timer.start()
+        #self.command_timer.start()
 
         while True:
             time.sleep(1)
@@ -320,7 +322,7 @@ class Walker:
                     self.walker_data['v'].append(format(v, ".3f"))
                     self.walker_data['omega'].append(format(omega, ".3f"))
                     self.walker_data['time'].append(format(self.walker_state.time_stamp - self.time_start, ".2f"))
-                    print('walker_x:', format(x, ".3f"), 'walker_y:', format(y, ".3f"))
+                    # print('walker_x:', format(x, ".3f"), 'walker_y:', format(y, ".3f"))
                 self.walker_data_semaphore.release()
 
         elif time_stamp == -2:

@@ -104,7 +104,7 @@ if __name__ == '__main__':
     pre_pulse_r = motor.get_motor_pos("right_motor")
     motor.send_cmd("left_motor", test_left_cmd)
     motor.send_cmd("right_motor", test_right_cmd)
-    time.sleep(2)
+    time.sleep(1)
     #pulse_l = motor.get_motor_pos("left_motor")
     #pulse_r = motor.get_motor_pos("right_motor")
     #print(pulse_r-pre_pulse_r, pulse_l-pre_pulse_l)

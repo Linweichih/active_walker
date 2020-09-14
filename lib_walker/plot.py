@@ -34,7 +34,7 @@ if __name__ == "__main__":
     walker_df = pd.DataFrame(walker_file)
     print(walker_df)
     human_df = pd.DataFrame(human_file)
-    human_df.plot(kind='line', x='time', y='v', color='red', ax=ax)
+    walker_df.plot(kind='line', x='time', y='omega', color='red', ax=ax)
     walker_df.plot(kind='line', x='time', y='v', color='blue', ax=ax)
     plt.show()
     """

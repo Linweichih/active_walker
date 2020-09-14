@@ -110,7 +110,7 @@ if __name__ == '__main__':
         print(force_list)
         time.sleep(0.05)
         t += 1
-        if t == 100:
+        if t == 10:
             break
     """
     cv2.namedWindow('image_win', flags=cv2.WINDOW_NORMAL | cv2.WINDOW_KEEPRATIO | cv2.WINDOW_GUI_EXPANDED)
