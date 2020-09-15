@@ -34,8 +34,8 @@ if __name__ == "__main__":
     walker_df = pd.DataFrame(walker_file)
     print(walker_df)
     human_df = pd.DataFrame(human_file)
-    walker_df.plot(kind='line', x='time', y='omega', color='red', ax=ax)
-    walker_df.plot(kind='line', x='time', y='v', color='blue', ax=ax)
+    human_df.plot(kind='line', x='time', y='y', color='red', ax=ax)
+    #walker_df.plot(kind='line', x='time', y='', color='blue', ax=ax)
     plt.show()
     """
     walker_file = pd.read_csv('C:/Users/kv4771/weichih/active_walker/Data_Result/walker_data_Sep_08_20_29_40.csv',

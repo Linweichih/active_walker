@@ -54,7 +54,6 @@ class MotorSerial:
                 ret_str = self.serial.readline()
                 if 'OK'.encode() not in ret_str:
                     print('Command is not set to the driver and return OK but return ', ret_str)
-                    self.serial.readline()
             except serial.SerialException:
                 print("Can not send motor message")
 
@@ -71,6 +70,8 @@ class MotorSerial:
                 self.serial.write(motor_cmd.encode())
             except serial.SerialException:
                 print("Can not send motor message")
+            # sleep for avoid the error return string
+            time.sleep(0.01)
             try:
                 ret_str = self.serial.readline()
                 # print(ret_str)
@@ -85,11 +86,12 @@ class MotorSerial:
             print("The serial is not open")
 
     def close(self):
-        self.send_cmd("right_motor", "V0")
-        self.send_cmd("left_motor", "V0")
-        self.send_cmd("right_motor", "DI")
-        self.send_cmd("left_motor", "DI")
-        self.serial.close()
+        if self.serial.isOpen():
+            self.send_cmd("right_motor", "V0")
+            self.send_cmd("left_motor", "V0")
+            self.send_cmd("right_motor", "DI")
+            self.send_cmd("left_motor", "DI")
+            self.serial.close()
 
 
 if __name__ == '__main__':

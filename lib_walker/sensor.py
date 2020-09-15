@@ -18,7 +18,8 @@ class UsbCam:
         self.cap = cv2.VideoCapture(int(config.get('usb_cam', 'cam_src')))
         self.cap.set(4, int(config.get('usb_cam', 'image_width')))
         self.cap.set(3, int(config.get('usb_cam', 'image_height')))
-
+        if self.cap.isOpened() is False:
+            self.cap.open()
         print("initialize success ")
 
     def read(self):
@@ -26,7 +27,8 @@ class UsbCam:
         return ret, frame
 
     def release(self):
-        self.cap.release()
+        if self.cap.isOpened():
+            self.cap.release()
 
 
 class ForceSensor:
@@ -102,7 +104,7 @@ class ForceSensor:
 
 
 if __name__ == '__main__':
-
+    """
     force = ForceSensor()
     t = 0
     while True:
@@ -130,6 +132,6 @@ if __name__ == '__main__':
         print("User Pressed Keyboard ctrl-c")
         # cv2.destroyAllWindows()
         sys.exit()
-    """
+
 
 

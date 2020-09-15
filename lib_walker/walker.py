@@ -44,6 +44,7 @@ def get_desired_pose(human_dist, human_angle):
 
 class Walker:
     def __init__(self):
+        self.start_reg = 0
         self.start_record = 0
         self.time_start = 0
         self.stop_sys_flag = 0
@@ -103,25 +104,35 @@ class Walker:
         # make the motor be push with human hand
         self.motor_serial.send_cmd("right_motor", "DI")
         self.motor_serial.send_cmd("left_motor", "DI")
-        time.sleep(3)
         self.encoder_timer.start()
-        time.sleep(1)
-        # wait several secs to let the camera track the feet
-        #self.command_timer.start()
+        # wait for the camera track the feet
+        while self.start_reg == 0:
+            time.sleep(0.5)
+        print("Controller start !!")
+        # self.command_timer.start()
 
         while True:
             time.sleep(1)
             if self.stop_sys_flag == 1:
-                self.motor_serial.close()
-                time.sleep(2)
+                if self.command_timer.is_alive():
+                    print("shut down the command timer")
+                    self.command_timer.cancel()
+                if self.motor_semaphore.acquire():
+                    self.motor_serial.close()
+                    self.motor_semaphore.release()
+                print("Close motor serial!!")
+                if self.encoder_timer.is_alive():
+                    print("shut down the encoder_timer")
+                    self.encoder_timer.cancel()
+                time.sleep(1)
                 break
         walker_df = pd.DataFrame(self.walker_data)
         human_df = pd.DataFrame(self.human_data)
         os.mkdir("./Data_Result/" + time.strftime("%b_%d_%H_%M_%S", time.localtime()))
-        walker_df.to_csv("./Data_Result/" + time.strftime("%b_%d_%H_%M_%S", time.localtime()) + "/walker_data.csv",
-                         sep=',')
-        human_df.to_csv("./Data_Result/" + time.strftime("%b_%d_%H_%M_%S", time.localtime()) + "/human_data.csv",
-                        sep=',')
+        #walker_df.to_csv("./Data_Result/" + time.strftime("%b_%d_%H_%M_%S", time.localtime()) + "/walker_data.csv",
+        #                 sep=',')
+        #human_df.to_csv("./Data_Result/" + time.strftime("%b_%d_%H_%M_%S", time.localtime()) + "/human_data.csv",
+        #                sep=',')
         print("\nRecord the data's csv file!!")
 
     def get_human_information(self):
@@ -134,14 +145,10 @@ class Walker:
             keyboard_ret = cv2.waitKey(1)
             if keyboard_ret == 27:
                 time.sleep(1)
-                if self.command_timer.is_alive():
-                    print("shut down the command timer")
-                    self.command_timer.cancel()
-                if self.encoder_timer.is_alive():
-                    print("shut down the encoder_timer")
-                    self.encoder_timer.cancel()
                 self.stop_sys_flag = 1
                 self.cam.release()
+                print("Close the camera !!")
+                print("shut down the cam_timer")
                 self.cam_timer.cancel()
 
         # process the shoe detection
@@ -222,6 +229,7 @@ class Walker:
                     # print("human_v:", (robot_vel - v).__format__(".2f"),
                     #      "human_dist:", (y-self.base_y).__format__(".3f"))
                 self.human_data_semaphore.release()
+            self.start_reg = 1
 
     def controller(self):
         timer_interval = 0.09
@@ -262,11 +270,13 @@ class Walker:
               "walker_v:", robot_vel, "walker_omega:", robot_angle_vel,
               "\ndesired_v:", v, "desired_w", omega, "Time:", time.time() - self.time_start)
         """
+
         desire_rpm_l = (2 * v - omega * self.wheel_dist) / (2 * self.wheel_radius) / math.pi / 2 * 60 * self.gear_ratio
         desire_rpm_r = (2 * v + omega * self.wheel_dist) / (2 * self.wheel_radius) / math.pi / 2 * 60 * self.gear_ratio
         right_cmd = "V" + str(-1 * int(desire_rpm_r))
         left_cmd = "V" + str(int(desire_rpm_l))
-
+        print("desired_v:", v, "desired_w", omega, "Time:", time.time() - self.time_start,
+              "desire_rpm_r:", desire_rpm_r, "desire_rpm_l:", desire_rpm_l)
         if self.motor_semaphore.acquire():
             self.motor_serial.send_cmd("left_motor", left_cmd)
             self.motor_semaphore.release()
@@ -292,6 +302,7 @@ class Walker:
             timer_interval = time.time() - time_stamp
             if pulse_l == 'NAN':
                 pulse_l = self.pulse_l
+                self.stop_sys_flag = 1
             if pulse_r == 'NAN':
                 pulse_r = self.pulse_r
             vl = (pulse_l - self.pulse_l) / 3000 / self.gear_ratio * 2 * math.pi / timer_interval
