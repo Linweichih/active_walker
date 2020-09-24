@@ -68,7 +68,8 @@ class Walker:
         self.K_3 = float(config.get('controller_config', 'K_3'))
         self.K_4 = float(config.get('controller_config', 'K_4'))
 
-        self.force_sensor = ForceSensor()
+        # self.force_sensor = ForceSensor()
+        # self.motor_serial = MotorSerial()
         self.cam = UsbCam()
         self.human_state = State()
         self.walker_state = State()
@@ -77,7 +78,7 @@ class Walker:
         self.walker_x = 0
         self.walker_y = 0
         self.walker_theta = 0
-        self.motor_serial = MotorSerial()
+
         self.motor_semaphore = Semaphore(1)
         self.walker_data_semaphore = Semaphore(1)
         self.human_data_semaphore = Semaphore(1)
@@ -102,9 +103,9 @@ class Walker:
         time.sleep(2)
         self.time_start = time.time()
         # make the motor be push with human hand
-        self.motor_serial.send_cmd("right_motor", "DI")
-        self.motor_serial.send_cmd("left_motor", "DI")
-        self.encoder_timer.start()
+        #self.motor_serial.send_cmd("right_motor", "DI")
+        #self.motor_serial.send_cmd("left_motor", "DI")
+        #self.encoder_timer.start()
         # wait for the camera track the feet
         while self.start_reg == 0:
             time.sleep(0.5)
@@ -161,7 +162,7 @@ class Walker:
         human_pos, human_ang = img2real_transform(human_pos_walker_frame, human_ang_walker_frame)
         human_pos[1] = 384 - human_pos[1]
         # human_ang = -1 * human_ang
-        force_data_list = self.force_sensor.read_force_data()
+        # force_data_list = self.force_sensor.read_force_data()
         if self.walker_data_semaphore.acquire():
             robot_vel = self.walker_state.v
             robot_angle_vel = self.walker_state.omega
@@ -192,12 +193,14 @@ class Walker:
                 self.human_state.y = y
                 self.human_state.x = x
                 self.human_state.theta = theta
+                """
                 self.human_state.x_force = force_data_list[0]
                 self.human_state.y_force = force_data_list[1]
                 self.human_state.z_force = force_data_list[2]
                 self.human_state.x_torque = force_data_list[3]
                 self.human_state.y_torque = force_data_list[4]
                 self.human_state.z_torque = force_data_list[5]
+                """
                 self.human_state.time_stamp = time.time()
                 # print("robot_vel", robot_vel, "robot_angle_vel:", robot_angle_vel,
                 #      "\nhuman_v:", self.human_state.v, "human_omega:", self.human_state.omega)
