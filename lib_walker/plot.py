@@ -8,7 +8,7 @@ if __name__ == "__main__":
     folder = os.listdir(Path(file_path).parent)
     for direc in folder:
         if direc == 'Data_Result':
-            total_data_folder = Path(file_path).parent.joinpath(direc)
+            total_data_folder = Path(file_path).parent.joinpath(direc).joinpath("test")
     total_data_list = os.listdir(total_data_folder)
     # print(total_data_list)
     for total_data in total_data_list:
@@ -32,10 +32,11 @@ if __name__ == "__main__":
                 print("NOT the human or walker file")
             # print(Path(total_data_folder).joinpath(total_data), "is a file!!")
     walker_df = pd.DataFrame(walker_file)
-    print(walker_df)
+
     human_df = pd.DataFrame(human_file)
-    # human_df.plot(kind='line', x='time', y='y', color='red', ax=ax)
-    walker_df.plot(kind='line', x='x', y='y', color='blue', ax=ax)
+    print(human_df)
+    human_df.plot(kind='line', x='time', y='v', color='red', ax=ax)
+    #walker_df.plot(kind='line', x='x', y='y', color='blue', ax=ax)
     plt.show()
     """
     walker_file = pd.read_csv('C:/Users/kv4771/weichih/active_walker/Data_Result/walker_data_Sep_08_20_29_40.csv',

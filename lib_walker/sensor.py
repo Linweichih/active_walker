@@ -154,6 +154,7 @@ class LiveGraph:
 
 
 if __name__ == '__main__':
+    """
     g = LiveGraph()
     g.show()
     """
@@ -174,7 +175,7 @@ if __name__ == '__main__':
         print("User Pressed Keyboard ctrl-c")
         # cv2.destroyAllWindows()
         sys.exit()
-        """
+
 
 
 

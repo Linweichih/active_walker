@@ -68,8 +68,17 @@ class Walker:
         self.K_3 = float(config.get('controller_config', 'K_3'))
         self.K_4 = float(config.get('controller_config', 'K_4'))
 
-        # self.force_sensor = ForceSensor()
-        # self.motor_serial = MotorSerial()
+        self.force_sensor = ForceSensor()
+        self.motor_serial = MotorSerial()
+        self.human_pos_filter = cv2.KalmanFilter(4, 2)
+        self.human_pos_filter.measurementMatrix = np.array(
+            [[1, 0, 0, 0], [0, 1, 0, 0]], np.float32)
+        self.human_pos_filter.transitionMatrix = np.array(
+            [[1, 0, 1, 0], [0, 1, 0, 1], [0, 0, 1, 0], [0, 0, 0, 1]], np.float32)
+        self.human_pos_filter.measurementNoiseCov = np.array(
+            [[1, 0], [0, 1]], np.float32) * 0.001
+        self.human_pos_filter.processNoiseCov = np.array(
+            [[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 1, 0], [0, 0, 0, 1]], np.float32) * 0.0001
         self.cam = UsbCam()
         self.human_state = State()
         self.walker_state = State()
@@ -100,15 +109,17 @@ class Walker:
 
     def run(self):
         self.cam_timer.start()
-        time.sleep(2)
         self.time_start = time.time()
+        time.sleep(2)
+
         # make the motor be push with human hand
-        #self.motor_serial.send_cmd("right_motor", "DI")
-        #self.motor_serial.send_cmd("left_motor", "DI")
-        #self.encoder_timer.start()
+        self.motor_serial.send_cmd("right_motor", "DI")
+        self.motor_serial.send_cmd("left_motor", "DI")
+        self.encoder_timer.start()
         # wait for the camera track the feet
         while self.start_reg == 0:
             time.sleep(0.5)
+        time.sleep(1.5)
         print("Controller start !!")
         # self.command_timer.start()
 
@@ -129,11 +140,11 @@ class Walker:
                 break
         walker_df = pd.DataFrame(self.walker_data)
         human_df = pd.DataFrame(self.human_data)
-        os.mkdir("./Data_Result/" + time.strftime("%b_%d_%H_%M_%S", time.localtime()))
-        #walker_df.to_csv("./Data_Result/" + time.strftime("%b_%d_%H_%M_%S", time.localtime()) + "/walker_data.csv",
-        #                 sep=',')
-        #human_df.to_csv("./Data_Result/" + time.strftime("%b_%d_%H_%M_%S", time.localtime()) + "/human_data.csv",
-        #                sep=',')
+        os.mkdir("./Data_Result/test/" + time.strftime("%b_%d_%H_%M_%S", time.localtime()))
+        walker_df.to_csv("./Data_Result/test/" + time.strftime("%b_%d_%H_%M_%S", time.localtime()) + "/walker_data.csv",
+                         sep=',')
+        human_df.to_csv("./Data_Result/test/" + time.strftime("%b_%d_%H_%M_%S", time.localtime()) + "/human_data.csv",
+                        sep=',')
         print("\nRecord the data's csv file!!")
 
     def get_human_information(self):
@@ -162,7 +173,7 @@ class Walker:
         human_pos, human_ang = img2real_transform(human_pos_walker_frame, human_ang_walker_frame)
         human_pos[1] = 384 - human_pos[1]
         # human_ang = -1 * human_ang
-        # force_data_list = self.force_sensor.read_force_data()
+        force_data_list = self.force_sensor.read_force_data()
         if self.walker_data_semaphore.acquire():
             robot_vel = self.walker_state.v
             robot_angle_vel = self.walker_state.omega
@@ -183,27 +194,36 @@ class Walker:
             if self.human_data_semaphore.acquire():
                 human_pos.astype(float)
                 time_interval = time.time() - self.human_state.time_stamp
-                v = (human_pos[1] - self.human_state.y) / time_interval
-                omega = (human_ang - self.human_state.theta) / time_interval
+                orininal_v = (human_pos[1] - self.human_state.y) / time_interval
+                original_omega = (human_ang - self.human_state.theta) / time_interval
                 y = human_pos[1]
                 x = human_pos[0]
                 theta = human_ang
+                current_measurement = np.array(
+                    [[np.float32(y)], [np.float32(theta)]])
+                self.human_pos_filter.correct(current_measurement)
+                pose = self.human_pos_filter.predict()
+                y = pose[0]
+                theta = pose[1]
+                v = pose[2]
+                omega = pose[3]
+
                 self.human_state.v = v
                 self.human_state.omega = omega
                 self.human_state.y = y
                 self.human_state.x = x
                 self.human_state.theta = theta
-                """
+
                 self.human_state.x_force = force_data_list[0]
                 self.human_state.y_force = force_data_list[1]
                 self.human_state.z_force = force_data_list[2]
                 self.human_state.x_torque = force_data_list[3]
                 self.human_state.y_torque = force_data_list[4]
                 self.human_state.z_torque = force_data_list[5]
-                """
+
                 self.human_state.time_stamp = time.time()
-                # print("robot_vel", robot_vel, "robot_angle_vel:", robot_angle_vel,
-                #      "\nhuman_v:", self.human_state.v, "human_omega:", self.human_state.omega)
+                print("robot_vel", robot_vel, "robot_angle_vel:", robot_angle_vel,
+                      "\nhuman_v:", robot_vel - v, "human_omega:", robot_angle_vel - omega)
                 if abs(v) < 0.01 and self.start_record == 0:
                     # self.base_y = self.human_state.y
                     self.start_record = 1
@@ -211,23 +231,31 @@ class Walker:
                 if self.start_record == 1:
                     self.human_data['x'].append(0)
                     try:
-                        self.human_data['y'].append((y-self.base_y).__format__(".3f"))
+                        self.human_data['y'].append(y.__float__().__format__(".3f"))
                     except TypeError:
                         print("detect TypeError")
-                        self.human_data['y'].append(y-self.base_y)
-                    self.human_data['theta'].append(theta.__format__(".4f"))
+                        self.human_data['y'].append(y)
                     try:
-                        self.human_data['v'].append((robot_vel - v).__format__(".2f"))
+                        self.human_data['theta'].append(theta.__float__().__format__(".4f"))
+                    except TypeError:
+                        print("detect theta TypeError", theta)
+                        self.human_data['theta'].append(theta)
+                    try:
+                        self.human_data['v'].append((robot_vel - v).__float__().__format__(".2f"))
                     except TypeError:
                         print(v)
                         self.human_data['v'].append(v)
-                    self.human_data['omega'].append((robot_angle_vel - omega).__format__(".3f"))
-                    self.human_data['x_force'].append(self.human_state.x_force.__format__(".4f"))
-                    self.human_data['y_force'].append(self.human_state.y_force.__format__(".4f"))
-                    self.human_data['z_force'].append(self.human_state.z_force.__format__(".4f"))
-                    self.human_data['x_torque'].append(self.human_state.x_torque.__format__(".4f"))
-                    self.human_data['y_torque'].append(self.human_state.y_torque.__format__(".4f"))
-                    self.human_data['z_torque'].append(self.human_state.z_torque.__format__(".4f"))
+                    try:
+                        self.human_data['omega'].append((robot_angle_vel - omega).__float__().__format__(".3f"))
+                    except TypeError:
+                        print("detect omega TypeError", omega)
+                        self.human_data['omega'].append(omega)
+                    self.human_data['x_force'].append(self.human_state.x_force.__float__().__format__(".4f"))
+                    self.human_data['y_force'].append(self.human_state.y_force.__float__().__format__(".4f"))
+                    self.human_data['z_force'].append(self.human_state.z_force.__float__().__format__(".4f"))
+                    self.human_data['x_torque'].append(self.human_state.x_torque.__float__().__format__(".4f"))
+                    self.human_data['y_torque'].append(self.human_state.y_torque.__float__().__format__(".4f"))
+                    self.human_data['z_torque'].append(self.human_state.z_torque.__float__().__format__(".4f"))
                     self.human_data['time'].append(format(self.human_state.time_stamp - self.time_start, ".2f"))
                     # print("human_v:", (robot_vel - v).__format__(".2f"),
                     #      "human_dist:", (y-self.base_y).__format__(".3f"))
