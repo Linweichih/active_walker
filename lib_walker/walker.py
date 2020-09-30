@@ -15,8 +15,9 @@ def img2real_transform(human_pos_walker_frame, human_ang_walker_frame):
         /2500*6 is calibration by rule of thumb
     """
     human_pos = np.zeros(2)
-    human_pos[0] = human_pos_walker_frame[0] / 2500 * 6
-    human_pos[1] = human_pos_walker_frame[1] / 2500 * 6
+    human_pos_walker_frame[1] = 384 - human_pos_walker_frame[1]
+    human_pos[0] = human_pos_walker_frame[0] / 750*2
+    human_pos[1] = human_pos_walker_frame[1] / 750*2
     return human_pos, float(human_ang_walker_frame)
 
 
@@ -76,9 +77,9 @@ class Walker:
         self.human_pos_filter.transitionMatrix = np.array(
             [[1, 0, 1, 0], [0, 1, 0, 1], [0, 0, 1, 0], [0, 0, 0, 1]], np.float32)
         self.human_pos_filter.measurementNoiseCov = np.array(
-            [[1, 0], [0, 1]], np.float32) * 0.001
+            [[1, 0], [0, 1]], np.float32) * 0.0001
         self.human_pos_filter.processNoiseCov = np.array(
-            [[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 1, 0], [0, 0, 0, 1]], np.float32) * 0.0001
+            [[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 1, 0], [0, 0, 0, 1]], np.float32) * 0.00001
         self.cam = UsbCam()
         self.human_state = State()
         self.walker_state = State()
@@ -113,15 +114,15 @@ class Walker:
         time.sleep(2)
 
         # make the motor be push with human hand
-        self.motor_serial.send_cmd("right_motor", "DI")
-        self.motor_serial.send_cmd("left_motor", "DI")
+        #self.motor_serial.send_cmd("right_motor", "DI")
+        #self.motor_serial.send_cmd("left_motor", "DI")
         self.encoder_timer.start()
         # wait for the camera track the feet
         while self.start_reg == 0:
-            time.sleep(0.5)
-        time.sleep(1.5)
+            time.sleep(0.2)
+        time.sleep(3)
         print("Controller start !!")
-        # self.command_timer.start()
+        self.command_timer.start()
 
         while True:
             time.sleep(1)
@@ -171,7 +172,7 @@ class Walker:
         cv2.imshow('Processed_image', pro_image)
         cv2.imshow('detection_mask', mask)
         human_pos, human_ang = img2real_transform(human_pos_walker_frame, human_ang_walker_frame)
-        human_pos[1] = 384 - human_pos[1]
+        # human_pos[1] = 384 - human_pos[1]
         # human_ang = -1 * human_ang
         force_data_list = self.force_sensor.read_force_data()
         if self.walker_data_semaphore.acquire():
@@ -207,7 +208,8 @@ class Walker:
                 theta = pose[1]
                 v = pose[2]
                 omega = pose[3]
-
+                v = v / time_interval
+                v = robot_vel - v
                 self.human_state.v = v
                 self.human_state.omega = omega
                 self.human_state.y = y
@@ -222,13 +224,15 @@ class Walker:
                 self.human_state.z_torque = force_data_list[5]
 
                 self.human_state.time_stamp = time.time()
-                print("robot_vel", robot_vel, "robot_angle_vel:", robot_angle_vel,
-                      "\nhuman_v:", robot_vel - v, "human_omega:", robot_angle_vel - omega)
-                if abs(v) < 0.01 and self.start_record == 0:
+
+                if abs(v) < 0.01 and self.start_record == 0 and time.time() - self.time_start > 4:
                     # self.base_y = self.human_state.y
                     self.start_record = 1
 
                 if self.start_record == 1:
+                    print("robot_vel", robot_vel, "robot_angle_vel:", robot_angle_vel,
+                          "\nhuman_v:", v, "human_omega:", omega,
+                          "\nhuman_y:", y)
                     self.human_data['x'].append(0)
                     try:
                         self.human_data['y'].append(y.__float__().__format__(".3f"))
@@ -241,7 +245,7 @@ class Walker:
                         print("detect theta TypeError", theta)
                         self.human_data['theta'].append(theta)
                     try:
-                        self.human_data['v'].append((robot_vel - v).__float__().__format__(".2f"))
+                        self.human_data['v'].append(v.__float__().__format__(".2f"))
                     except TypeError:
                         print(v)
                         self.human_data['v'].append(v)
