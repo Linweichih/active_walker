@@ -29,9 +29,9 @@ class MotorSerial:
         self.send_cmd("left_motor", "HO")
         self.send_cmd("right_motor", "HO")
         # set acceleration and deceleration
-        self.send_cmd("left_motor", "AC5")     # 10 almost 0.3 m/s^2
+        self.send_cmd("left_motor", "AC10")     # 10 almost 0.3 m/s^2
         self.send_cmd("left_motor", "DEC10")    # 10 almost -0.3 m/s^2
-        self.send_cmd("right_motor", "AC5")
+        self.send_cmd("right_motor", "AC10")
         self.send_cmd("right_motor", "DEC10")
         # try to send the cmd to motor
         for i in range(5):

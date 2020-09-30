@@ -209,7 +209,8 @@ class Walker:
                 v = pose[2]
                 omega = pose[3]
                 v = v / time_interval
-                v = robot_vel - v
+                omega = omega / time_interval
+                # v = robot_vel - v
                 self.human_state.v = v
                 self.human_state.omega = omega
                 self.human_state.y = y
