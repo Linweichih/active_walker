@@ -114,8 +114,8 @@ class Walker:
         time.sleep(2)
 
         # make the motor be push with human hand
-        #self.motor_serial.send_cmd("right_motor", "DI")
-        #self.motor_serial.send_cmd("left_motor", "DI")
+        # self.motor_serial.send_cmd("right_motor", "DI")
+        # self.motor_serial.send_cmd("left_motor", "DI")
         self.encoder_timer.start()
         # wait for the camera track the feet
         while self.start_reg == 0:
@@ -246,10 +246,10 @@ class Walker:
                         print("detect theta TypeError", theta)
                         self.human_data['theta'].append(theta)
                     try:
-                        self.human_data['v'].append(v.__float__().__format__(".2f"))
+                        self.human_data['v'].append((v+robot_vel).__float__().__format__(".2f"))
                     except TypeError:
                         print(v)
-                        self.human_data['v'].append(v)
+                        self.human_data['v'].append(v+robot_vel)
                     try:
                         self.human_data['omega'].append((robot_angle_vel - omega).__float__().__format__(".3f"))
                     except TypeError:
@@ -311,8 +311,11 @@ class Walker:
         desire_rpm_r = (2 * v + omega * self.wheel_dist) / (2 * self.wheel_radius) / math.pi / 2 * 60 * self.gear_ratio
         right_cmd = "V" + str(-1 * int(desire_rpm_r))
         left_cmd = "V" + str(int(desire_rpm_l))
+        """
         print("desired_v:", v, "desired_w", omega, "Time:", time.time() - self.time_start,
               "desire_rpm_r:", desire_rpm_r, "desire_rpm_l:", desire_rpm_l)
+        """
+
         if self.motor_semaphore.acquire():
             self.motor_serial.send_cmd("left_motor", left_cmd)
             self.motor_semaphore.release()
