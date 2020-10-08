@@ -3,6 +3,7 @@ class State:
     def __init__(self):
         self.x = 0.0
         self.y = 0.0
+        self.path = 0.0
         self.theta = 0.0
         self.v = 0.0
         self.omega = 0.0

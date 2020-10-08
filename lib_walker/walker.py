@@ -17,7 +17,7 @@ def img2real_transform(human_pos_walker_frame, human_ang_walker_frame):
     human_pos = np.zeros(2)
     human_pos_walker_frame[1] = 384 - human_pos_walker_frame[1]
     human_pos[0] = human_pos_walker_frame[0] / 750*2
-    human_pos[1] = human_pos_walker_frame[1] / 750*2
+    human_pos[1] = human_pos_walker_frame[1] / 750*2*6/7
     return human_pos, float(human_ang_walker_frame)
 
 
@@ -52,7 +52,7 @@ class Walker:
         self.base_y = 383
         # init csv file to write
         self.walker_data = {'time': [],
-                            'x': [], 'y': [], 'theta': [],
+                            'x': [], 'y': [], 'path': [], 'theta': [],
                             'v': [], 'omega': []}
         self.human_data = {'time': [],
                            'x': [], 'y': [], 'theta': [],
@@ -77,7 +77,7 @@ class Walker:
         self.human_pos_filter.transitionMatrix = np.array(
             [[1, 0, 1, 0], [0, 1, 0, 1], [0, 0, 1, 0], [0, 0, 0, 1]], np.float32)
         self.human_pos_filter.measurementNoiseCov = np.array(
-            [[1, 0], [0, 1]], np.float32) * 0.0001
+            [[1, 0], [0, 1]], np.float32) * 0.001
         self.human_pos_filter.processNoiseCov = np.array(
             [[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 1, 0], [0, 0, 0, 1]], np.float32) * 0.00001
         self.cam = UsbCam()
@@ -114,15 +114,15 @@ class Walker:
         time.sleep(2)
 
         # make the motor be push with human hand
-        # self.motor_serial.send_cmd("right_motor", "DI")
-        # self.motor_serial.send_cmd("left_motor", "DI")
+        self.motor_serial.send_cmd("right_motor", "DI")
+        self.motor_serial.send_cmd("left_motor", "DI")
         self.encoder_timer.start()
         # wait for the camera track the feet
         while self.start_reg == 0:
             time.sleep(0.2)
         time.sleep(3)
         print("Controller start !!")
-        self.command_timer.start()
+        # self.command_timer.start()
 
         while True:
             time.sleep(1)
@@ -177,6 +177,7 @@ class Walker:
         force_data_list = self.force_sensor.read_force_data()
         if self.walker_data_semaphore.acquire():
             robot_vel = self.walker_state.v
+            robot_path = self.walker_state.path
             robot_angle_vel = self.walker_state.omega
             self.walker_data_semaphore.release()
         time_stamp = -2
@@ -200,6 +201,7 @@ class Walker:
                 y = human_pos[1]
                 x = human_pos[0]
                 theta = human_ang
+                y = robot_path - y
                 current_measurement = np.array(
                     [[np.float32(y)], [np.float32(theta)]])
                 self.human_pos_filter.correct(current_measurement)
@@ -232,8 +234,8 @@ class Walker:
 
                 if self.start_record == 1:
                     print("robot_vel", robot_vel, "robot_angle_vel:", robot_angle_vel,
-                          "\nhuman_v:", v, "human_omega:", omega,
-                          "\nhuman_y:", y)
+                          "\nhuman_v:", v, "human_omega:", robot_angle_vel - omega,
+                          "\nhuman_y:", y, "\nrobot_y:", robot_path)
                     self.human_data['x'].append(0)
                     try:
                         self.human_data['y'].append(y.__float__().__format__(".3f"))
@@ -246,10 +248,10 @@ class Walker:
                         print("detect theta TypeError", theta)
                         self.human_data['theta'].append(theta)
                     try:
-                        self.human_data['v'].append((v+robot_vel).__float__().__format__(".2f"))
+                        self.human_data['v'].append(v.__float__().__format__(".2f"))
                     except TypeError:
                         print(v)
-                        self.human_data['v'].append(v+robot_vel)
+                        self.human_data['v'].append(v)
                     try:
                         self.human_data['omega'].append((robot_angle_vel - omega).__float__().__format__(".3f"))
                     except TypeError:
@@ -358,9 +360,11 @@ class Walker:
                     omega = self.wheel_radius / self.wheel_dist * (vr - vl)
                     x = self.walker_state.x + self.walker_state.v * math.cos(self.walker_state.theta) * timer_interval
                     y = self.walker_state.y + self.walker_state.v * math.sin(self.walker_state.theta) * timer_interval
+                    path = self.walker_state.path + self.walker_state.v * timer_interval
                     theta = self.walker_state.theta + self.walker_state.omega * timer_interval
                     self.walker_state.v = v
                     self.walker_state.omega = omega
+                    self.walker_state.path = path
                     self.walker_state.x = x
                     self.walker_state.y = y
                     self.walker_state.theta = theta
@@ -368,6 +372,7 @@ class Walker:
 
                     self.walker_data['x'].append(format(x, ".3f"))
                     self.walker_data['y'].append(format(y, ".3f"))
+                    self.walker_data['path'].append(format(path, ".3f"))
                     self.walker_data['theta'].append(format(theta, ".4f"))
                     self.walker_data['v'].append(format(v, ".3f"))
                     self.walker_data['omega'].append(format(omega, ".3f"))
@@ -386,6 +391,7 @@ class Walker:
                 self.walker_state.omega = 0
                 self.walker_state.x = 0
                 self.walker_state.y = 0
+                self.walker_state.path = 0
                 self.walker_state.theta = math.pi / 2
                 # self.time_start = self.walker_state.time_stamp
                 self.walker_data_semaphore.release()
