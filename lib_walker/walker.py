@@ -114,15 +114,15 @@ class Walker:
         time.sleep(2)
 
         # make the motor be push with human hand
-        self.motor_serial.send_cmd("right_motor", "DI")
-        self.motor_serial.send_cmd("left_motor", "DI")
+        #self.motor_serial.send_cmd("right_motor", "DI")
+        #self.motor_serial.send_cmd("left_motor", "DI")
         self.encoder_timer.start()
         # wait for the camera track the feet
         while self.start_reg == 0:
             time.sleep(0.2)
         time.sleep(3)
         print("Controller start !!")
-        # self.command_timer.start()
+        self.command_timer.start()
 
         while True:
             time.sleep(1)
@@ -275,21 +275,24 @@ class Walker:
         if self.walker_data_semaphore.acquire():
             robot_vel = self.walker_state.v
             robot_angle_vel = self.walker_state.omega
+            robot_path = self.walker_state.path
             self.walker_data_semaphore.release()
 
         if self.human_data_semaphore.acquire():
             human_dist = self.human_state.y
             human_angle = self.human_state.theta
-            relative_v = self.human_state.v
+            human_v = self.human_state.v
             relative_omega = self.human_state.omega
             self.human_data_semaphore.release()
 
+        human_relative_dist = robot_path - human_dist
         desired_dist, desired_angle = get_desired_pose(human_dist, human_angle)
         """
         human_dist = desired_dist
         human_angle = desired_angle
         """
-        accel = -self.K_1 * relative_v - self.K_2 * (human_dist - desired_dist)
+        relative_v = robot_vel - human_v
+        accel = -self.K_1 * relative_v - self.K_2 * (human_relative_dist - desired_dist)
         angle_accel = -self.K_3 * relative_omega - self.K_4 * (human_angle - desired_angle)
         if abs(accel) > self.MAX_AC:
             accel = self.MAX_AC * accel / abs(accel)
