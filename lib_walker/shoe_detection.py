@@ -74,10 +74,12 @@ class ShoeDetection:
         left_mask = outputs[:, :, 1]
         right_pos, right_angle, right_bbox = self.right_shoe_track.update(right_mask)
         left_pos, left_angle, left_bbox = self.left_shoe_track.update(left_mask)
-        #print("right_dist:", right_pos[1] / 2500 * 6, "right_foot_angle:", right_angle * 180 / math.pi,
+        # print("right_dist:", right_pos[1] / 2500 * 6, "right_foot_angle:", right_angle * 180 / math.pi,
         #      "left_dist:", left_pos[1] / 2500 * 6, "left foot angle:", left_angle * 180 / math.pi)
         if left_angle > 1.7 and right_angle > 1.7:
             no_foot_flag = True
+
+        # print("foot's bbox:", right_bbox, left_bbox)
         if not no_foot_flag:
             self.human_position[0] = right_pos[0] / 2 + left_pos[0] / 2
             self.human_position[1] = right_pos[1] / 2 + left_pos[1] / 2
@@ -85,20 +87,31 @@ class ShoeDetection:
 
             # print("human_position:", self.human_position, "    human_angle:", self.human_angle)
             # image = self.bridge.cv2_to_imgmsg(processed_image,"bgr8")
-
-            # put the human pos and angle onto image
-
-            processed_image = cv2.line(resized_image,
-                                       (int(self.human_position[0]), int(self.human_position[1])),
-                                       (int(self.human_position[0] + 60 * math.sin(self.human_angle)),
-                                        int(self.human_position[1] + 60 * math.cos(self.human_angle))),
-                                       (0, 0, 200), 8)
+            processed_image = resized_image
             # print("right box:", right_bbox)
+            # Have right foot
             if right_bbox.all() != 0:
                 processed_image = cv2.drawContours(processed_image, [right_bbox], -1, (120, 120, 0), 3)
+            else:
+                self.human_position[0] = -1
+                self.human_position[1] = -1
             # print("left box:", left_bbox)
+            # Have left foot
             if left_bbox.all() != 0:
                 processed_image = cv2.drawContours(processed_image, [left_bbox], -1, (0, 120, 120), 3)
+            else:
+                self.human_position[0] = -1
+                self.human_position[1] = -1
+            # put the human pos and angle onto image
+            if self.human_position[0] != -1:
+                processed_image = cv2.line(processed_image,
+                                           (int(self.human_position[0]), int(self.human_position[1])),
+                                           (int(self.human_position[0] + 60 * math.sin(self.human_angle)),
+                                            int(self.human_position[1] + 60 * math.cos(self.human_angle))),
+                                           (0, 0, 200), 4)
+                processed_image = cv2.circle(processed_image, (int(self.human_position[0]), int(self.human_position[1]))
+                                             , 8, (200, 200, 200), -1)
+
             # print("Use {} sec to process a image".format(time.time() - t_s))
             # processed_image = cv2.line(processed_image, (100, 0), (400, 318), (0, 0, 255),5)
             return processed_image, outputs, self.human_position, self.human_angle

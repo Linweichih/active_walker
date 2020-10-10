@@ -49,6 +49,7 @@ class Walker:
         self.start_record = 0
         self.time_start = 0
         self.stop_sys_flag = 0
+        self.no_foot_flag = True
         self.base_y = 383
         # init csv file to write
         self.walker_data = {'time': [],
@@ -166,6 +167,10 @@ class Walker:
 
         # process the shoe detection
         pro_image, mask, human_pos_walker_frame, human_ang_walker_frame = self.shoe_detection.detect(image_frame)
+        if human_pos_walker_frame[0] == -1:
+            self.no_foot_flag = True
+        else:
+            self.no_foot_flag = False
         # image_frame = cv2.resize(image_frame, (512, 384))
         mask = cv2.resize(mask, (512, 384))
         # mask = np.concatenate((image_frame, mask), axis=1)
@@ -304,6 +309,10 @@ class Walker:
             v = self.MAX_V * v / abs(v)
         if abs(omega) > self.MAX_W:
             omega = self.MAX_W * omega / abs(omega)
+        # make the walker stop when foot ars not detected
+        if self.no_foot_flag:
+            v = 0
+            omega = 0
         """
         print("distance error :", human_dist - desired_dist, "angle error :", human_angle - desired_angle,
               "vel_error:", relative_v, "omega_error:", relative_omega,
