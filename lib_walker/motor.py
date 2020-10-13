@@ -96,7 +96,7 @@ class MotorSerial:
 
 if __name__ == '__main__':
     motor = MotorSerial()
-    mo_v = 0.3
+    mo_v = 0
     mo_omega = 0
     desire_l = (2 * mo_v - mo_omega * 0.6) / (2 * 0.0625) / math.pi / 2 * 60 * 14
     desire_r = (2 * mo_v + mo_omega * 0.6) / (2 * 0.0625) / math.pi / 2 * 60 * 14
@@ -106,7 +106,7 @@ if __name__ == '__main__':
     pre_pulse_r = motor.get_motor_pos("right_motor")
     motor.send_cmd("left_motor", test_left_cmd)
     motor.send_cmd("right_motor", test_right_cmd)
-    time.sleep(5)
+    time.sleep(100)
     #pulse_l = motor.get_motor_pos("left_motor")
     #pulse_r = motor.get_motor_pos("right_motor")
     #print(pulse_r-pre_pulse_r, pulse_l-pre_pulse_l)

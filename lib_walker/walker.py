@@ -51,6 +51,8 @@ class Walker:
         self.stop_sys_flag = 0
         self.no_foot_flag = True
         self.base_y = 383
+        self.pre_rel_v = 0
+        self.pre_dist_error = 0
         # init csv file to write
         self.walker_data = {'time': [],
                             'x': [], 'y': [], 'path': [], 'theta': [],
@@ -78,7 +80,7 @@ class Walker:
         self.human_pos_filter.transitionMatrix = np.array(
             [[1, 0, 1, 0], [0, 1, 0, 1], [0, 0, 1, 0], [0, 0, 0, 1]], np.float32)
         self.human_pos_filter.measurementNoiseCov = np.array(
-            [[1, 0], [0, 1]], np.float32) * 0.001
+            [[1, 0], [0, 1]], np.float32) * 0.1
         self.human_pos_filter.processNoiseCov = np.array(
             [[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 1, 0], [0, 0, 0, 1]], np.float32) * 0.00001
         self.cam = UsbCam()
@@ -238,9 +240,11 @@ class Walker:
                     self.start_record = 1
 
                 if self.start_record == 1:
+                    """
                     print("robot_vel", robot_vel, "robot_angle_vel:", robot_angle_vel,
                           "\nhuman_v:", v, "human_omega:", robot_angle_vel - omega,
                           "\nhuman_y:", y, "\nrobot_y:", robot_path)
+                    """
                     self.human_data['x'].append(0)
                     try:
                         self.human_data['y'].append(y.__float__().__format__(".3f"))
@@ -296,9 +300,19 @@ class Walker:
         human_dist = desired_dist
         human_angle = desired_angle
         """
+        dist_error = human_relative_dist - desired_dist
+        de_dist_error = (dist_error - self.pre_dist_error) / timer_interval
+        self.pre_dist_error = dist_error
         relative_v = robot_vel - human_v
-        accel = -self.K_1 * relative_v - self.K_2 * (human_relative_dist - desired_dist)
+        # PD control for velocity tracking
+        rel_a = (relative_v - self.pre_rel_v) / timer_interval
+        self.pre_rel_v = relative_v
+
+        # control law implementation (PD control for dist and vel )
+        accel = -self.K_1 * rel_a - self.K_1 * relative_v - self.K_2 * dist_error - self.K_2 * de_dist_error
         angle_accel = -self.K_3 * relative_omega - self.K_4 * (human_angle - desired_angle)
+
+        # constrain of acceleration
         if abs(accel) > self.MAX_AC:
             accel = self.MAX_AC * accel / abs(accel)
         if abs(angle_accel) > self.MAX_A_AC:
@@ -313,13 +327,12 @@ class Walker:
         if self.no_foot_flag:
             v = 0
             omega = 0
-        """
-        print("distance error :", human_dist - desired_dist, "angle error :", human_angle - desired_angle,
+
+        print("distance error :", dist_error, "angle error :", human_angle - desired_angle,
               "vel_error:", relative_v, "omega_error:", relative_omega,
               "\naccel:", accel, "angle_accel", angle_accel,
               "walker_v:", robot_vel, "walker_omega:", robot_angle_vel,
-              "\ndesired_v:", v, "desired_w", omega, "Time:", time.time() - self.time_start)
-        """
+              "\n", "Time:", time.time() - self.time_start)
 
         desire_rpm_l = (2 * v - omega * self.wheel_dist) / (2 * self.wheel_radius) / math.pi / 2 * 60 * self.gear_ratio
         desire_rpm_r = (2 * v + omega * self.wheel_dist) / (2 * self.wheel_radius) / math.pi / 2 * 60 * self.gear_ratio
