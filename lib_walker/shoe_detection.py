@@ -92,16 +92,12 @@ class ShoeDetection:
             # Have right foot
             if right_bbox.all() != 0:
                 processed_image = cv2.drawContours(processed_image, [right_bbox], -1, (120, 120, 0), 3)
-            else:
-                self.human_position[0] = -1
-                self.human_position[1] = -1
+
             # print("left box:", left_bbox)
             # Have left foot
             if left_bbox.all() != 0:
                 processed_image = cv2.drawContours(processed_image, [left_bbox], -1, (0, 120, 120), 3)
-            else:
-                self.human_position[0] = -1
-                self.human_position[1] = -1
+
             # put the human pos and angle onto image
             if self.human_position[0] != -1:
                 processed_image = cv2.line(processed_image,

@@ -53,7 +53,8 @@ class Walker:
         self.base_y = 383
         self.pre_rel_v = 0
         self.pre_dist_error = 0
-
+        self.pre_angle_error = 0
+        self.pre_rel_omega = 0
         # init csv file to write
         self.walker_data = {'time': [],
                             'x': [], 'y': [], 'path': [], 'theta': [],
@@ -310,22 +311,24 @@ class Walker:
         de_dist_error = (dist_error - self.pre_dist_error) / timer_interval
         self.pre_dist_error = dist_error
         angle_error = human_angle - desired_angle
-
+        de_angle_error = (angle_error - self.pre_angle_error) / timer_interval
+        self.pre_angle_error = angle_error
         relative_v = robot_vel - human_v
-        # PD control for velocity tracking
         rel_a = (relative_v - self.pre_rel_v) / timer_interval
         self.pre_rel_v = relative_v
+        rel_angle_a = (relative_omega - self.pre_rel_omega) / timer_interval
+        self.pre_rel_omega = relative_omega
 
         # control law implementation (PD control for error dist and vel )
-        """
-        accel = -self.K_1 * rel_a - self.K_1 * relative_v - self.K_2 * dist_error - self.K_2 * de_dist_error
-        angle_accel = -self.K_3 * relative_omega - self.K_4 * (human_angle - desired_angle)
-        """
 
+        accel = -self.K_1 * rel_a - self.K_1 * relative_v - self.K_2 * dist_error - self.K_2 * de_dist_error
+        angle_accel = - self.K_3 * rel_angle_a - self.K_3 * relative_omega \
+                      - self.K_4 * angle_error - self.K_4 * de_angle_error
+        """
         # original control law
         accel = self.K_1 * relative_v - self.K_2 * dist_error
         angle_accel = -self.K_3 * relative_omega - self.K_4 * angle_error
-
+        """
         # constrain of acceleration
         if abs(accel) > self.MAX_AC:
             accel = self.MAX_AC * accel / abs(accel)
