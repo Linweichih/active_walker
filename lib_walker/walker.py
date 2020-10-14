@@ -9,6 +9,12 @@ import math
 import pandas as pd
 
 
+DIST_MAX = float(config.get('human_safety_parameter', 'DIST_MAX'))
+DIST_MIN = float(config.get('human_safety_parameter', 'DIST_MIN'))
+ANGLE_MAX = float(config.get('human_safety_parameter', 'ANGLE_MAX'))
+ANGLE_MIN = float(config.get('human_safety_parameter', 'ANGLE_MIN'))
+
+
 def img2real_transform(human_pos_walker_frame, human_ang_walker_frame):
     """
         real transform will depend on the camera placed (calibration)
@@ -19,12 +25,6 @@ def img2real_transform(human_pos_walker_frame, human_ang_walker_frame):
     human_pos[0] = human_pos_walker_frame[0] / 750*2
     human_pos[1] = human_pos_walker_frame[1] / 750*2*6/7
     return human_pos, float(human_ang_walker_frame)
-
-
-DIST_MAX = float(config.get('human_safety_parameter', 'DIST_MAX'))
-DIST_MIN = float(config.get('human_safety_parameter', 'DIST_MIN'))
-ANGLE_MAX = float(config.get('human_safety_parameter', 'ANGLE_MAX'))
-ANGLE_MIN = float(config.get('human_safety_parameter', 'ANGLE_MIN'))
 
 
 def get_desired_pose(human_dist, human_angle):
@@ -53,6 +53,7 @@ class Walker:
         self.base_y = 383
         self.pre_rel_v = 0
         self.pre_dist_error = 0
+
         # init csv file to write
         self.walker_data = {'time': [],
                             'x': [], 'y': [], 'path': [], 'theta': [],
@@ -71,9 +72,11 @@ class Walker:
         self.K_2 = float(config.get('controller_config', 'K_2'))
         self.K_3 = float(config.get('controller_config', 'K_3'))
         self.K_4 = float(config.get('controller_config', 'K_4'))
+        self.gear_ratio = float(config.get('motor_config', 'gear_ratio'))
+        self.wheel_radius = float(config.get('motor_config', 'wheel_radius'))
+        self.wheel_dist = float(config.get('motor_config', 'wheel_distance'))
 
-        self.force_sensor = ForceSensor()
-        self.motor_serial = MotorSerial()
+        # human pos track filter parameter set
         self.human_pos_filter = cv2.KalmanFilter(4, 2)
         self.human_pos_filter.measurementMatrix = np.array(
             [[1, 0, 0, 0], [0, 1, 0, 0]], np.float32)
@@ -83,6 +86,10 @@ class Walker:
             [[1, 0], [0, 1]], np.float32) * 0.1
         self.human_pos_filter.processNoiseCov = np.array(
             [[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 1, 0], [0, 0, 0, 1]], np.float32) * 0.00001
+
+        self.shoe_detection = ShoeDetection()
+        self.force_sensor = ForceSensor()
+        self.motor_serial = MotorSerial()
         self.cam = UsbCam()
         self.human_state = State()
         self.walker_state = State()
@@ -91,24 +98,24 @@ class Walker:
         self.walker_x = 0
         self.walker_y = 0
         self.walker_theta = 0
-
+        # semaphore set
         self.motor_semaphore = Semaphore(1)
         self.walker_data_semaphore = Semaphore(1)
         self.human_data_semaphore = Semaphore(1)
+
         self.time_previous = -1
         self.img_num = 0
         self.pulse_l = 0
         self.pulse_r = 0
-        self.gear_ratio = float(config.get('motor_config', 'gear_ratio'))
-        self.wheel_radius = float(config.get('motor_config', 'wheel_radius'))
-        self.wheel_dist = float(config.get('motor_config', 'wheel_distance'))
+
+        # timer set
         self.cam_timer = timer(0.03, self.get_human_information)
         self.cam_timer.daemon = True
         self.encoder_timer = timer(0.06, self.get_walker_information)
         self.cam_timer.daemon = True
         self.command_timer = timer(0.09, self.controller)
         self.command_timer.daemon = True
-        self.shoe_detection = ShoeDetection()
+
         print("walker init success!!")
 
     def run(self):
@@ -117,8 +124,8 @@ class Walker:
         time.sleep(2)
 
         # make the motor be push with human hand
-        #self.motor_serial.send_cmd("right_motor", "DI")
-        #self.motor_serial.send_cmd("left_motor", "DI")
+        # self.motor_serial.send_cmd("right_motor", "DI")
+        # self.motor_serial.send_cmd("left_motor", "DI")
         self.encoder_timer.start()
         # wait for the camera track the feet
         while self.start_reg == 0:
@@ -203,8 +210,7 @@ class Walker:
             if self.human_data_semaphore.acquire():
                 human_pos.astype(float)
                 time_interval = time.time() - self.human_state.time_stamp
-                orininal_v = (human_pos[1] - self.human_state.y) / time_interval
-                original_omega = (human_ang - self.human_state.theta) / time_interval
+
                 y = human_pos[1]
                 x = human_pos[0]
                 theta = human_ang
@@ -303,14 +309,22 @@ class Walker:
         dist_error = human_relative_dist - desired_dist
         de_dist_error = (dist_error - self.pre_dist_error) / timer_interval
         self.pre_dist_error = dist_error
+        angle_error = human_angle - desired_angle
+
         relative_v = robot_vel - human_v
         # PD control for velocity tracking
         rel_a = (relative_v - self.pre_rel_v) / timer_interval
         self.pre_rel_v = relative_v
 
-        # control law implementation (PD control for dist and vel )
+        # control law implementation (PD control for error dist and vel )
+        """
         accel = -self.K_1 * rel_a - self.K_1 * relative_v - self.K_2 * dist_error - self.K_2 * de_dist_error
         angle_accel = -self.K_3 * relative_omega - self.K_4 * (human_angle - desired_angle)
+        """
+
+        # original control law
+        accel = self.K_1 * relative_v - self.K_2 * dist_error
+        angle_accel = -self.K_3 * relative_omega - self.K_4 * angle_error
 
         # constrain of acceleration
         if abs(accel) > self.MAX_AC:
