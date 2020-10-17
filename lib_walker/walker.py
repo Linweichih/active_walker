@@ -22,7 +22,7 @@ def img2real_transform(human_pos_walker_frame, human_ang_walker_frame):
     """
     human_pos = np.zeros(2)
     human_pos_walker_frame[1] = 384 - human_pos_walker_frame[1]
-    human_pos[0] = human_pos_walker_frame[0] / 750*2
+    human_pos[0] = 0
     human_pos[1] = human_pos_walker_frame[1] / 750*2*6/7
     return human_pos, float(human_ang_walker_frame)
 
@@ -84,7 +84,7 @@ class Walker:
         self.human_pos_filter.transitionMatrix = np.array(
             [[1, 0, 1, 0], [0, 1, 0, 1], [0, 0, 1, 0], [0, 0, 0, 1]], np.float32)
         self.human_pos_filter.measurementNoiseCov = np.array(
-            [[1, 0], [0, 1]], np.float32) * 0.1
+            [[1, 0], [0, 1]], np.float32) * 0.01
         self.human_pos_filter.processNoiseCov = np.array(
             [[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 1, 0], [0, 0, 0, 1]], np.float32) * 0.00001
 
@@ -133,6 +133,7 @@ class Walker:
             time.sleep(0.2)
         time.sleep(3)
         print("Controller start !!")
+        time.sleep(5)
         # self.command_timer.start()
 
         while True:
@@ -184,9 +185,14 @@ class Walker:
         # image_frame = cv2.resize(image_frame, (512, 384))
         mask = cv2.resize(mask, (512, 384))
         # mask = np.concatenate((image_frame, mask), axis=1)
-        cv2.imshow('Processed_image', pro_image)
-        cv2.imshow('detection_mask', mask)
+
         human_pos, human_ang = img2real_transform(human_pos_walker_frame, human_ang_walker_frame)
+        font = cv2.FONT_HERSHEY_SIMPLEX
+        bottomLeftCornerOfText = (0, 50)
+        fontScale = 1
+        fontColor = (255, 255, 0)
+        lineType = 2
+
         # human_pos[1] = 384 - human_pos[1]
         # human_ang = -1 * human_ang
         force_data_list = self.force_sensor.read_force_data()
@@ -282,8 +288,17 @@ class Walker:
                     self.human_data['time'].append(format(self.human_state.time_stamp - self.time_start, ".2f"))
                     # print("human_v:", (robot_vel - v).__format__(".2f"),
                     #      "human_dist:", (y-self.base_y).__format__(".3f"))
+                    try:
+                        pro_image = cv2.putText(pro_image, str(y) + str(v), bottomLeftCornerOfText, font, fontScale,
+                                                fontColor, lineType)
+                    except:
+                        print("ERROR")
                 self.human_data_semaphore.release()
             self.start_reg = 1
+            # write the pos number
+
+        cv2.imshow('Processed_image', pro_image)
+        cv2.imshow('detection_mask', mask)
 
     def controller(self):
         timer_interval = 0.09
@@ -326,7 +341,7 @@ class Walker:
                       - self.K_4 * angle_error - self.K_4 * de_angle_error
         """
         # original control law
-        accel = self.K_1 * relative_v - self.K_2 * dist_error
+        accel = -self.K_1 * relative_v - self.K_2 * dist_error
         angle_accel = -self.K_3 * relative_omega - self.K_4 * angle_error
         """
         # constrain of acceleration
@@ -419,7 +434,7 @@ class Walker:
                     self.walker_data['v'].append(format(v, ".3f"))
                     self.walker_data['omega'].append(format(omega, ".3f"))
                     self.walker_data['time'].append(format(self.walker_state.time_stamp - self.time_start, ".2f"))
-                    print('walker_x:', format(x, ".3f"), 'walker_y:', format(y, ".3f"))
+                    # print('walker_x:', format(x, ".3f"), 'walker_y:', format(y, ".3f"))
                 self.walker_data_semaphore.release()
 
         elif time_stamp == -2:
