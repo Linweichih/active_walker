@@ -32,7 +32,6 @@ if __name__ == "__main__":
                 print("NOT the human or walker file")
             # print(Path(total_data_folder).joinpath(total_data), "is a file!!")
     walker_df = pd.DataFrame(walker_file)
-
     human_df = pd.DataFrame(human_file)
     print(human_df)
     human_df.plot(kind='line', x='time', y='v', color='red', ax=ax)
