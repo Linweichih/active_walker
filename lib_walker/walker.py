@@ -125,15 +125,15 @@ class Walker:
         time.sleep(2)
 
         # make the motor be push with human hand
-        # self.motor_serial.send_cmd("right_motor", "DI")
-        # self.motor_serial.send_cmd("left_motor", "DI")
+        self.motor_serial.send_cmd("right_motor", "DI")
+        self.motor_serial.send_cmd("left_motor", "DI")
         self.encoder_timer.start()
         # wait for the camera track the feet
         while self.start_reg == 0:
             time.sleep(0.2)
         time.sleep(3)
         print("Controller start !!")
-        self.command_timer.start()
+        # self.command_timer.start()
 
         while True:
             time.sleep(1)
@@ -419,7 +419,7 @@ class Walker:
                     self.walker_data['v'].append(format(v, ".3f"))
                     self.walker_data['omega'].append(format(omega, ".3f"))
                     self.walker_data['time'].append(format(self.walker_state.time_stamp - self.time_start, ".2f"))
-                    # print('walker_x:', format(x, ".3f"), 'walker_y:', format(y, ".3f"))
+                    print('walker_x:', format(x, ".3f"), 'walker_y:', format(y, ".3f"))
                 self.walker_data_semaphore.release()
 
         elif time_stamp == -2:
