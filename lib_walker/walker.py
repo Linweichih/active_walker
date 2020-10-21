@@ -125,8 +125,8 @@ class Walker:
         time.sleep(2)
 
         # make the motor be push with human hand
-        self.motor_serial.send_cmd("right_motor", "DI")
-        self.motor_serial.send_cmd("left_motor", "DI")
+        # self.motor_serial.send_cmd("right_motor", "DI")
+        # self.motor_serial.send_cmd("left_motor", "DI")
         self.encoder_timer.start()
         # wait for the camera track the feet
         while self.start_reg == 0:
@@ -134,7 +134,7 @@ class Walker:
         time.sleep(3)
         print("Controller start !!")
         time.sleep(5)
-        # self.command_timer.start()
+        self.command_timer.start()
 
         while True:
             time.sleep(1)
@@ -334,16 +334,10 @@ class Walker:
         rel_angle_a = (relative_omega - self.pre_rel_omega) / timer_interval
         self.pre_rel_omega = relative_omega
 
-        # control law implementation (PD control for error dist and vel )
-
-        accel = -self.K_1 * rel_a - self.K_1 * relative_v - self.K_2 * dist_error - self.K_2 * de_dist_error
-        angle_accel = - self.K_3 * rel_angle_a - self.K_3 * relative_omega \
-                      - self.K_4 * angle_error - self.K_4 * de_angle_error
-        """
         # original control law
         accel = -self.K_1 * relative_v - self.K_2 * dist_error
         angle_accel = -self.K_3 * relative_omega - self.K_4 * angle_error
-        """
+
         # constrain of acceleration
         if abs(accel) > self.MAX_AC:
             accel = self.MAX_AC * accel / abs(accel)
