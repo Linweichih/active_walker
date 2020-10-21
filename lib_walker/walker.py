@@ -131,9 +131,8 @@ class Walker:
         # wait for the camera track the feet
         while self.start_reg == 0:
             time.sleep(0.2)
-        time.sleep(3)
+        time.sleep(6)
         print("Controller start !!")
-        time.sleep(5)
         self.command_timer.start()
 
         while True:
