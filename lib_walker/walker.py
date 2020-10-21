@@ -78,15 +78,27 @@ class Walker:
         self.wheel_dist = float(config.get('motor_config', 'wheel_distance'))
 
         # human pos track filter parameter set
-        self.human_pos_filter = cv2.KalmanFilter(4, 2)
+        self.human_pos_filter = cv2.KalmanFilter(6, 2)
         self.human_pos_filter.measurementMatrix = np.array(
-            [[1, 0, 0, 0], [0, 1, 0, 0]], np.float32)
+            [[1, 0, 0, 0, 0, 0],
+             [0, 1, 0, 0, 0, 0]], np.float32)
         self.human_pos_filter.transitionMatrix = np.array(
-            [[1, 0, 1, 0], [0, 1, 0, 1], [0, 0, 1, 0], [0, 0, 0, 1]], np.float32)
+            [[1, 0, 1, 0, 0, 0],
+             [0, 1, 0, 1, 0, 0],
+             [0, 0, 1, 0, 1, 0],
+             [0, 0, 0, 1, 0, 1],
+             [0, 0, 0, 0, 0, 1],
+             [0, 0, 0, 0, 0, 1]], np.float32)
         self.human_pos_filter.measurementNoiseCov = np.array(
-            [[1, 0], [0, 1]], np.float32) * 0.01
+            [[1, 0],
+             [0, 1]], np.float32) * 0.01
         self.human_pos_filter.processNoiseCov = np.array(
-            [[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 1, 0], [0, 0, 0, 1]], np.float32) * 0.00001
+            [[1, 0, 0, 0, 0, 0],
+             [0, 1, 0, 0, 0, 0],
+             [0, 0, 1, 0, 0, 0],
+             [0, 0, 0, 1, 0, 0],
+             [0, 0, 0, 0, 1, 0],
+             [0, 0, 0, 0, 0, 1]], np.float32) * 0.00001
 
         self.shoe_detection = ShoeDetection()
         self.force_sensor = ForceSensor()
@@ -231,9 +243,13 @@ class Walker:
                 omega = pose[3]
                 v = v / time_interval
                 omega = omega / time_interval
+                accel = pose[4] / time_interval / time_interval
+                angle_accel = pose[5] / time_interval / time_interval
                 # v = robot_vel - v
                 self.human_state.v = v
                 self.human_state.omega = omega
+                self.human_state.accel = accel
+                self.human_state.angle_accel = angle_accel
                 self.human_state.y = y
                 self.human_state.x = x
                 self.human_state.theta = theta
@@ -322,15 +338,15 @@ class Walker:
         human_angle = desired_angle
         """
         dist_error = human_relative_dist - desired_dist
-        de_dist_error = (dist_error - self.pre_dist_error) / timer_interval
+        # de_dist_error = (dist_error - self.pre_dist_error) / timer_interval
         self.pre_dist_error = dist_error
         angle_error = human_angle - desired_angle
-        de_angle_error = (angle_error - self.pre_angle_error) / timer_interval
+        # de_angle_error = (angle_error - self.pre_angle_error) / timer_interval
         self.pre_angle_error = angle_error
         relative_v = robot_vel - human_v
-        rel_a = (relative_v - self.pre_rel_v) / timer_interval
+        # rel_a = (relative_v - self.pre_rel_v) / timer_interval
         self.pre_rel_v = relative_v
-        rel_angle_a = (relative_omega - self.pre_rel_omega) / timer_interval
+        # rel_angle_a = (relative_omega - self.pre_rel_omega) / timer_interval
         self.pre_rel_omega = relative_omega
 
         # original control law

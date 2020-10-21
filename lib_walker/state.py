@@ -7,6 +7,8 @@ class State:
         self.theta = 0.0
         self.v = 0.0
         self.omega = 0.0
+        self.accel = 0.0
+        self.angle_accel = 0.0
         self.time_stamp = -1
         self.x_force = 0.0
         self.y_force = 0.0
