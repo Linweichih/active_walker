@@ -330,11 +330,13 @@ class Walker:
         if self.walker_data_semaphore.acquire():
             robot_vel = self.walker_state.v
             robot_angle_vel = self.walker_state.omega
+            robot_angle = self.walker_state.theta
             robot_path = self.walker_state.path
             self.walker_data_semaphore.release()
 
         if self.human_data_semaphore.acquire():
             human_accel = self.human_state.accel
+            human_angle_accel = self.human_state.angle_accel
             human_dist = self.human_state.y
             human_angle = self.human_state.theta
             human_v = self.human_state.v
@@ -342,17 +344,19 @@ class Walker:
             self.human_data_semaphore.release()
 
         human_relative_dist = robot_path - human_dist
+        human_relative_angle = robot_angle - human_angle
         desired_dist, desired_angle = get_desired_pose(human_dist, human_angle)
+
         """
         human_dist = desired_dist
         human_angle = desired_angle
         """
         dist_error = human_relative_dist - desired_dist
         # de_dist_error = (dist_error - self.pre_dist_error) / timer_interval
-        self.pre_dist_error = dist_error
-        angle_error = human_angle - desired_angle
+        # self.pre_dist_error = dist_error
+        angle_error = human_relative_angle - desired_angle
         # de_angle_error = (angle_error - self.pre_angle_error) / timer_interval
-        self.pre_angle_error = angle_error
+        # self.pre_angle_error = angle_error
         v_error = robot_vel - human_v
         # rel_a = (relative_v - self.pre_rel_v) / timer_interval
         omega_error = robot_angle_vel - human_omega
@@ -360,7 +364,7 @@ class Walker:
 
         # original control law
         accel = human_accel - self.K_1 * v_error - self.K_2 * dist_error
-        angle_accel = -self.K_3 * omega_error - self.K_4 * angle_error
+        angle_accel = human_angle_accel - self.K_3 * omega_error - self.K_4 * angle_error
 
         # constrain of acceleration
         if abs(accel) > self.MAX_AC:
@@ -373,13 +377,17 @@ class Walker:
             v = self.MAX_V * v / abs(v)
         if abs(omega) > self.MAX_W:
             omega = self.MAX_W * omega / abs(omega)
+        if abs(v) < 0.02:
+            v = 0
+        if abs(omega) < 0.01:
+            omega = 0
         # make the walker stop when foot ars not detected
         if self.no_foot_flag:
             v = 0
             omega = 0
 
         print("distance error :", dist_error, "angle error :", human_angle - desired_angle,
-              "vel_error:", relative_v, "omega_error:", relative_omega,
+              "vel_error:", v_error, "omega_error:", omega_error,
               "\naccel:", accel, "angle_accel", angle_accel,
               "walker_v:", robot_vel, "walker_omega:", robot_angle_vel,
               "\n", "Time:", time.time() - self.time_start)
