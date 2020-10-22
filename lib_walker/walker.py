@@ -61,7 +61,7 @@ class Walker:
                             'v': [], 'omega': []}
         self.human_data = {'time': [],
                            'x': [], 'y': [], 'theta': [],
-                           'v': [], 'omega': [],
+                           'v': [], 'omega': [], 'accel': [], 'angle_accel': [],
                            'x_force': [], 'y_force': [], 'z_force': [],
                            'x_torque': [], 'y_torque': [], 'z_torque': []}
 
@@ -82,6 +82,7 @@ class Walker:
         self.human_pos_filter.measurementMatrix = np.array(
             [[1, 0, 0, 0, 0, 0],
              [0, 1, 0, 0, 0, 0]], np.float32)
+        """
         self.human_pos_filter.transitionMatrix = np.array(
             [[1, 0, 1, 0, 0, 0],
              [0, 1, 0, 1, 0, 0],
@@ -89,16 +90,17 @@ class Walker:
              [0, 0, 0, 1, 0, 1],
              [0, 0, 0, 0, 0, 1],
              [0, 0, 0, 0, 0, 1]], np.float32)
+        """
         self.human_pos_filter.measurementNoiseCov = np.array(
             [[1, 0],
-             [0, 1]], np.float32) * 0.01
+             [0, 1]], np.float32) * 0.005
         self.human_pos_filter.processNoiseCov = np.array(
             [[1, 0, 0, 0, 0, 0],
              [0, 1, 0, 0, 0, 0],
              [0, 0, 1, 0, 0, 0],
              [0, 0, 0, 1, 0, 0],
              [0, 0, 0, 0, 1, 0],
-             [0, 0, 0, 0, 0, 1]], np.float32) * 0.00001
+             [0, 0, 0, 0, 0, 1]], np.float32) * 0.0001
 
         self.shoe_detection = ShoeDetection()
         self.force_sensor = ForceSensor()
@@ -137,8 +139,8 @@ class Walker:
         time.sleep(2)
 
         # make the motor be push with human hand
-        # self.motor_serial.send_cmd("right_motor", "DI")
-        # self.motor_serial.send_cmd("left_motor", "DI")
+        #self.motor_serial.send_cmd("right_motor", "DI")
+        #self.motor_serial.send_cmd("left_motor", "DI")
         self.encoder_timer.start()
         # wait for the camera track the feet
         while self.start_reg == 0:
@@ -210,6 +212,7 @@ class Walker:
         if self.walker_data_semaphore.acquire():
             robot_vel = self.walker_state.v
             robot_path = self.walker_state.path
+            robot_angle = self.walker_state.theta
             robot_angle_vel = self.walker_state.omega
             self.walker_data_semaphore.release()
         time_stamp = -2
@@ -228,10 +231,16 @@ class Walker:
             if self.human_data_semaphore.acquire():
                 human_pos.astype(float)
                 time_interval = time.time() - self.human_state.time_stamp
-
+                self.human_pos_filter.transitionMatrix = np.array(
+                    [[1, 0, time_interval, 0, 0, 0],
+                     [0, 1, 0, time_interval, 0, 0],
+                     [0, 0, 1, 0, time_interval, 0],
+                     [0, 0, 0, 1, 0, time_interval],
+                     [0, 0, 0, 0, 0, 1],
+                     [0, 0, 0, 0, 0, 1]], np.float32)
                 y = human_pos[1]
                 x = human_pos[0]
-                theta = human_ang
+                theta = robot_angle + human_ang
                 y = robot_path - y
                 current_measurement = np.array(
                     [[np.float32(y)], [np.float32(theta)]])
@@ -241,10 +250,8 @@ class Walker:
                 theta = pose[1]
                 v = pose[2]
                 omega = pose[3]
-                v = v / time_interval
-                omega = omega / time_interval
-                accel = pose[4] / time_interval / time_interval
-                angle_accel = pose[5] / time_interval / time_interval
+                accel = pose[4]
+                angle_accel = pose[5]
                 # v = robot_vel - v
                 self.human_state.v = v
                 self.human_state.omega = omega
@@ -253,7 +260,7 @@ class Walker:
                 self.human_state.y = y
                 self.human_state.x = x
                 self.human_state.theta = theta
-
+                print("accel:", accel, "v:", v, "y:", y)
                 self.human_state.x_force = force_data_list[0]
                 self.human_state.y_force = force_data_list[1]
                 self.human_state.z_force = force_data_list[2]
@@ -294,6 +301,8 @@ class Walker:
                     except TypeError:
                         print("detect omega TypeError", omega)
                         self.human_data['omega'].append(omega)
+                    self.human_data['accel'].append(accel.__float__().__format__(".3f"))
+                    self.human_data['angle_accel'].append(angle_accel.__float__().__format__(".3f"))
                     self.human_data['x_force'].append(self.human_state.x_force.__float__().__format__(".4f"))
                     self.human_data['y_force'].append(self.human_state.y_force.__float__().__format__(".4f"))
                     self.human_data['z_force'].append(self.human_state.z_force.__float__().__format__(".4f"))
@@ -304,8 +313,8 @@ class Walker:
                     # print("human_v:", (robot_vel - v).__format__(".2f"),
                     #      "human_dist:", (y-self.base_y).__format__(".3f"))
                     try:
-                        pro_image = cv2.putText(pro_image, str(y) + str(v), bottomLeftCornerOfText, font, fontScale,
-                                                fontColor, lineType)
+                        pro_image = cv2.putText(pro_image, "human angle" + str(theta),
+                                                bottomLeftCornerOfText, font, fontScale, fontColor, lineType)
                     except:
                         print("ERROR")
                 self.human_data_semaphore.release()
@@ -325,10 +334,11 @@ class Walker:
             self.walker_data_semaphore.release()
 
         if self.human_data_semaphore.acquire():
+            human_accel = self.human_state.accel
             human_dist = self.human_state.y
             human_angle = self.human_state.theta
             human_v = self.human_state.v
-            relative_omega = self.human_state.omega
+            human_omega = self.human_state.omega
             self.human_data_semaphore.release()
 
         human_relative_dist = robot_path - human_dist
@@ -343,15 +353,14 @@ class Walker:
         angle_error = human_angle - desired_angle
         # de_angle_error = (angle_error - self.pre_angle_error) / timer_interval
         self.pre_angle_error = angle_error
-        relative_v = robot_vel - human_v
+        v_error = robot_vel - human_v
         # rel_a = (relative_v - self.pre_rel_v) / timer_interval
-        self.pre_rel_v = relative_v
+        omega_error = robot_angle_vel - human_omega
         # rel_angle_a = (relative_omega - self.pre_rel_omega) / timer_interval
-        self.pre_rel_omega = relative_omega
 
         # original control law
-        accel = -self.K_1 * relative_v - self.K_2 * dist_error
-        angle_accel = -self.K_3 * relative_omega - self.K_4 * angle_error
+        accel = human_accel - self.K_1 * v_error - self.K_2 * dist_error
+        angle_accel = -self.K_3 * omega_error - self.K_4 * angle_error
 
         # constrain of acceleration
         if abs(accel) > self.MAX_AC:
