@@ -297,7 +297,7 @@ class Walker:
                         print(v)
                         self.human_data['v'].append(v)
                     try:
-                        self.human_data['omega'].append((robot_angle_vel - omega).__float__().__format__(".3f"))
+                        self.human_data['omega'].append((omega).__float__().__format__(".3f"))
                     except TypeError:
                         print("detect omega TypeError", omega)
                         self.human_data['omega'].append(omega)
@@ -313,7 +313,7 @@ class Walker:
                     # print("human_v:", (robot_vel - v).__format__(".2f"),
                     #      "human_dist:", (y-self.base_y).__format__(".3f"))
                     try:
-                        pro_image = cv2.putText(pro_image, "human angle" + str(theta),
+                        pro_image = cv2.putText(pro_image, "human angle" + str(theta/math.pi*180),
                                                 bottomLeftCornerOfText, font, fontScale, fontColor, lineType)
                     except:
                         print("ERROR")
@@ -341,6 +341,8 @@ class Walker:
             human_angle = self.human_state.theta
             human_v = self.human_state.v
             human_omega = self.human_state.omega
+            human_force_y = self.human_state.y_force
+            human_torque_z = self.human_state.z_torque
             self.human_data_semaphore.release()
 
         human_relative_dist = robot_path - human_dist
@@ -365,7 +367,11 @@ class Walker:
         # original control law
         accel = human_accel - self.K_1 * v_error - self.K_2 * dist_error
         angle_accel = human_angle_accel - self.K_3 * omega_error - self.K_4 * angle_error
-
+        # human intention
+        intention_accel = human_force_y / 22.77 - 24.55 / 22.77 * robot_vel
+        intention_angle_accel = human_torque_z / 22.4 - 24.5 / 22.4 * robot_angle_vel
+        accel += intention_accel
+        angle_accel += intention_angle_accel
         # constrain of acceleration
         if abs(accel) > self.MAX_AC:
             accel = self.MAX_AC * accel / abs(accel)
