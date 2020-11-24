@@ -3,7 +3,9 @@ import pandas as pd
 from pathlib import Path
 import os
 if __name__ == "__main__":
+
     ax = plt.gca()
+
     file_path = os.getcwd()
     folder = os.listdir(Path(file_path).parent)
     for direc in folder:
@@ -34,21 +36,24 @@ if __name__ == "__main__":
     walker_df = pd.DataFrame(walker_file)
     human_df = pd.DataFrame(human_file)
     print(human_df)
-    #human_df.plot(kind='line', x='time', y='y', color='red', ax=ax)
-    walker_df.plot(kind='line', x='x', y='y', color='blue', ax=ax)
+    #human_df.plot(kind='line', x='time', y='v', color='red', ax=ax)
+    #human_df.plot(kind='line', x='time', y='v', color='black', ax=ax)
+    walker_df.plot(kind='line', x='time', y='v', color='blue', ax=ax)
+    walker_df.plot(kind='line', x='time', y='rel_dist', color='red', ax=ax)
 
     plt.show()
     """
-    walker_file = pd.read_csv('C:/Users/kv4771/weichih/active_walker/Data_Result/walker_data_Sep_08_20_29_40.csv',
-                              sep='\t')
-    human_file = pd.read_csv('C:/Users/kv4771/weichih/active_walker/Data_Result'
-                             '/human_data_walker_frame_Sep_08_20_29_40.csv',
-                             sep='\t')
+    walker_file = pd.read_csv('C:/Users/kv4771/weichih/active_walker/Data_Result/walk_complex_path/walker_data.csv',
+                              sep=',')
+    human_file = pd.read_csv('C:/Users/kv4771/weichih/active_walker/Data_Result/walk_complex_path/human_data.csv',
+                             sep=',')
     
     walker_df = pd.DataFrame(walker_file)
     human_df = pd.DataFrame(human_file)
-    human_df.plot(kind='line', x='time', y='theta', color='red', ax=ax)
-    walker_df.plot(kind='line', x='time', y='theta', color='blue', ax=ax)
+    # human_df.plot(kind='line', x='time', y='rel_dist', color='red', ax=ax)
+    walker_df.plot(kind='line', x='time', y='v', color='blue', ax=ax)
+    walker_df.plot(kind='line', x='time', y='rel_dist', color='red', ax=ax)
     plt.show()
     """
+
 

@@ -3,6 +3,7 @@ import numpy as np
 import math
 import configparser
 import os
+import time
 config = configparser.ConfigParser()
 parent_dir = os.path.dirname(os.path.abspath(__file__))
 config.read(parent_dir + '/device.cfg')
@@ -32,9 +33,7 @@ class ObjectTrack:
         self.kalman = cv2.KalmanFilter(6, 3)
         self.kalman.measurementMatrix = np.array([[1, 0, 0, 0, 0, 0], [0, 1, 0, 0, 0, 0], [0, 0, 1, 0, 0, 0]],
                                                  np.float32)
-        self.kalman.transitionMatrix = np.array(
-            [[1, 0, 0, 1, 0, 0], [0, 1, 0, 0, 1, 0], [0, 0, 1, 0, 0, 1], [0, 0, 0, 1, 0, 0], [0, 0, 0, 0, 1, 0],
-             [0, 0, 0, 0, 0, 1]], np.float32)
+        self.update_time = time.time()
         self.kalman.processNoiseCov = np.array(
             [[1, 0, 0, 0, 0, 0], [0, 1, 0, 0, 0, 0], [0, 0, 1, 0, 0, 0], [0, 0, 0, 1, 0, 0], [0, 0, 0, 0, 1, 0],
              [0, 0, 0, 0, 0, 1]], np.float32) * 0.0001
@@ -48,6 +47,13 @@ class ObjectTrack:
 
     def update(self, mask):
 
+        self.kalman.transitionMatrix = np.array(
+            [[1, 0, 0, 1, 0, 0],
+             [0, 1, 0, 0, 1, 0],
+             [0, 0, 1, 0, 0, 1],
+             [0, 0, 0, 1, 0, 0],
+             [0, 0, 0, 0, 1, 0],
+             [0, 0, 0, 0, 0, 1]], np.float32)
         # pre-process the mask
         mask = cv2.bitwise_and(mask, self.filter_kernel)
         mask = cv2.morphologyEx(mask, cv2.MORPH_OPEN, self.open_kernel)
@@ -61,10 +67,13 @@ class ObjectTrack:
         if self.position[0] > 0:
             self.kalman.correct(current_measurement)
         pose = self.kalman.predict()
+        """
         self.position = np.zeros(2)
         self.position[0] = pose[0]
         self.position[1] = pose[1]
         self.angle = pose[2]
+        """
+
         return self.position, self.angle, bbox
 
     def find_center_angle(self, mask):

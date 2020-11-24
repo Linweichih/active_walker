@@ -29,10 +29,10 @@ class MotorSerial:
         self.send_cmd("left_motor", "HO")
         self.send_cmd("right_motor", "HO")
         # set acceleration and deceleration
-        self.send_cmd("left_motor", "AC10")     # 10 almost 0.3 m/s^2
-        self.send_cmd("left_motor", "DEC20")    # 10 almost -0.3 m/s^2
-        self.send_cmd("right_motor", "AC10")
-        self.send_cmd("right_motor", "DEC20")
+        self.send_cmd("left_motor", "AC40")     # 10 almost 0.3 m/s^2
+        self.send_cmd("left_motor", "DEC40")    # 10 almost -0.3 m/s^2
+        self.send_cmd("right_motor", "AC40")
+        self.send_cmd("right_motor", "DEC40")
         # try to send the cmd to motor
         for i in range(5):
             self.send_cmd("right_motor", "V0")
@@ -96,7 +96,7 @@ class MotorSerial:
 
 if __name__ == '__main__':
     motor = MotorSerial()
-    mo_v = 0
+    mo_v = -0.01
     mo_omega = 0
     desire_l = (2 * mo_v - mo_omega * 0.6) / (2 * 0.0625) / math.pi / 2 * 60 * 14
     desire_r = (2 * mo_v + mo_omega * 0.6) / (2 * 0.0625) / math.pi / 2 * 60 * 14
@@ -106,7 +106,7 @@ if __name__ == '__main__':
     pre_pulse_r = motor.get_motor_pos("right_motor")
     motor.send_cmd("left_motor", test_left_cmd)
     motor.send_cmd("right_motor", test_right_cmd)
-    time.sleep(100)
+    time.sleep(1)
     #pulse_l = motor.get_motor_pos("left_motor")
     #pulse_r = motor.get_motor_pos("right_motor")
     #print(pulse_r-pre_pulse_r, pulse_l-pre_pulse_l)

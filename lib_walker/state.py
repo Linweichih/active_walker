@@ -16,6 +16,8 @@ class State:
         self.x_torque = 0.0
         self.y_torque = 0.0
         self.z_torque = 0.0
+        self.rel_dist = 0.0
+        self.rel_angle = 0.0
     """
     useless
     def update(self, x, y, theta):
